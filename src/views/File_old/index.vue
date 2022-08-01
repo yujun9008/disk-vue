@@ -42,7 +42,7 @@ import ImgReview from "@/components/ImgReview";
 import PdfReview from "@/components/PdfReview";
 import VideoReview from "@/components/VideoReview";
 import AudioReview from "@/components/AudioReview";
-import { listDir, queryFileList, queryFolderAndFiles } from "@/api/file";
+import { listDir } from "@/api/file";
 import { storageInfo } from "@/api/storage";
 
 export default {
@@ -112,15 +112,11 @@ export default {
 
       let params = {
         folderId: this.folderId,
-        page: 1,
-        size: 20,
       };
 
-      // listDir(params)
-      // queryFileList(params)
-      queryFolderAndFiles(params)
+      listDir(params)
         .then((res) => {
-          this.fileList = res.pageInfo?.records ?? [];
+          this.fileList = res.subFolderList;
         })
         .catch((err) => console.log(err));
       // this.fileList = [
@@ -156,7 +152,6 @@ export default {
     //  获取查看大图的数据
     imgReviewData(row, visible) {
       if (row) {
-        console.log("row121212.1", row.shortUrl);
         this.imgReview.fileUrl = row.userId + row.filePath;
         this.imgReview.name = row.name;
       }
@@ -197,9 +192,8 @@ export default {
       }
       let folderIdList = folderIds ? folderIds.split(",") : [folderIds];
       let folderId = folderIdList[folderIdList.length - 1];
-      if (!folderId) {
-        // folderId = -1;
-        folderId = 9;
+      if (folderId === "") {
+        folderId = -1;
       }
       return folderId;
     },
