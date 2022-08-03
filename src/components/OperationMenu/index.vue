@@ -123,6 +123,7 @@ import {
   copyDir,
   deleteFile,
   download,
+  getDownloadFile,
   listDirTree,
   mkdir,
   moveDir,
@@ -176,11 +177,11 @@ export default {
         .then(({ value }) => {
           if (value && value.trim()) {
             mkdir({
-              parentFolderId: 9 || this.folderId,
+              parentFolderId: this.folderId,
               folderType: this.folderType,
               folderName: value,
               firstRootFolderId: "-1",
-              creator: "kakaxi",
+              creator: this.userId,
             }).then((res) => {
               if (res.flag === "SUCCESS") {
                 this.$message({
@@ -229,12 +230,12 @@ export default {
       })
         .then(() => {
           ids = this.selectionFile[0].id;
-          let data = { deleter: "kakaxi" };
+          let data = { deleter: this.userId };
           const isFolder = this.selectionFile[0].documentFlag === "folder";
           if (isFolder) {
             data.folderId = ids;
           } else {
-            data.fileId = ids;
+            data.fileIds = this.selectionFile.map((i) => i.id);
           }
 
           deleteFile(data, isFolder).then((res) => {
@@ -313,14 +314,27 @@ export default {
       return file;
     },
     beforeUpload: function (file) {
+      console.log("file", file);
       return new Promise((resolve, reject) => {
+        const fileType = (type, file) => {
+          if (type.indexOf("image") > -1) {
+            return "picture";
+          } else if (type.indexOf("video") > -1) {
+            return "video";
+          } else if (type.indexOf("zip") > -1 || type.indexOf("rar") > -1) {
+            return "pack";
+          } else {
+            // return "document";
+            return file.name.split(".")[1];
+          }
+        };
         this.uploadParams = {
           fileName: file.name,
-          fileType: "document",
+          fileType: fileType(file.type, file),
           fileSuffix: file.name?.split(".")[1],
           fileSize: file.size,
-          folderId: 9,
-          uploader: "kakaxi",
+          folderId: this.folderId,
+          uploader: this.userId,
         };
         this.$nextTick(() => resolve());
       });
@@ -359,9 +373,12 @@ export default {
     },
     downLoad: function () {
       this.selectionFile.forEach((it) => {
-        download({ fileId: it.fileId }).then((res) => {
-          this.$download(res.data.url, it.fileName);
-        });
+        getDownloadFile(it.id, it.shortUrl);
+        // getDownloadFile({ fileId: it.id, shortUrl: it.shortUrl }).then(
+        //   (res) => {
+        //     this.$download(res);
+        //   }
+        // );
       });
     },
     moveTo: function () {
@@ -493,6 +510,11 @@ export default {
     token: {
       get() {
         return this.$store.getters.token;
+      },
+    },
+    userId: {
+      get() {
+        return this.$store.getters.userId;
       },
     },
 

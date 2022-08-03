@@ -3,6 +3,7 @@ import Router from "vue-router";
 
 Vue.use(Router);
 
+
 export default new Router({
   mode: "history",
   base: process.env.BASE_URL,
@@ -76,6 +77,10 @@ export default new Router({
 });
 
 const originalPush = Router.prototype.push;
+const originalReplace = Router.prototype.replace;
 Router.prototype.push = function push(location) {
   return originalPush.call(this, location).catch((err) => err);
+};
+Router.prototype.replace = function push(location) {
+  return originalReplace.call(this, location).catch((err) => err);
 };

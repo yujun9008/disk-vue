@@ -4,16 +4,16 @@
       v-show="imgReview.visible"
       @click.self="closeImgReview"
   >
-    <img class="img-large" ref="rotate" v-if="imgReview.fileUrl" :src="src" alt/>
+    <img class="img-large" ref="rotate" v-if="imgReview.fileUrl" :src="imgReview.fileUrl" alt/>
     <div class="opera-btn-group">
-      <a
+      <!-- <a
           class="download-link"
           target="_blank"
           :href="src"
           :download="imgReview.name"
       >
         <i class="opera-icon el-icon-download" title="保存到本地"></i>
-      </a>
+      </a> -->
       <i class="opera-icon el-icon-refresh-right" title="向右旋转" @click="rotateImg"></i>
       <i class="opera-icon el-icon-aim" title="恢复" @click="restore"></i>
       <i class="opera-icon el-icon-zoom-in" title="放大" @click="zoomIn"></i>

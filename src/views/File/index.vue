@@ -42,7 +42,14 @@ import ImgReview from "@/components/ImgReview";
 import PdfReview from "@/components/PdfReview";
 import VideoReview from "@/components/VideoReview";
 import AudioReview from "@/components/AudioReview";
-import { listDir, queryFileList, queryFolderAndFiles } from "@/api/file";
+import {
+  listDir,
+  queryFileList,
+  queryFolderAndFiles,
+  queryMyDir,
+  getPreviewImageUrl,
+  getPreviewVideoUrl,
+} from "@/api/file";
 import { storageInfo } from "@/api/storage";
 
 export default {
@@ -90,61 +97,37 @@ export default {
     getTableDataByType(search) {
       //  分类型
       this.showFileListByType(search);
-      // storageInfo().then((res) => {
-      //   this.$store.dispatch("setStorage", res.data);
-      // });
-      this.$store.dispatch("setStorage", {
-        storageId: 1,
-        totalSize: 10737418240,
-        usedSize: 18039003,
-        userId: 1,
-      });
     },
 
     //  根据文件类型展示文件列表
     showFileListByType(search) {
-      // let data = {
-      //   folderId: this.folderId,
-      //   type: this.fileType,
-      //   fileName: search,
-      //   _: new Date().getTime(),
-      // };
-
       let params = {
         folderId: this.folderId,
         page: 1,
         size: 20,
       };
 
-      // listDir(params)
-      // queryFileList(params)
       queryFolderAndFiles(params)
         .then((res) => {
           this.fileList = res.pageInfo?.records ?? [];
         })
         .catch((err) => console.log(err));
-      // this.fileList = [
-      //   {
-      //     createTime: "2022-04-24T15:40:36.527+00:00",
-      //     downloadNum: 0,
-      //     extendName: "jpg",
-      //     fileId: 13,
-      //     fileName: "/57994_20161202110049/a.jpg",
-      //     filePath:
-      //       "/6e46623f82c74dd190219123fb7b4932/5c85d0ee1ddcb56e8e8725fc7e966085.jpg",
-      //     fileSize: 37955,
-      //     hash: "5c85d0ee1ddcb56e8e8725fc7e966085",
-      //     isDir: false,
-      //     lastModifyTime: "2022-04-24T15:40:36.527+00:00",
-      //     name: "a.jpg",
-      //     path: "5c85d0ee1ddcb56e8e8725fc7e966085.jpg",
-      //     folderId: 2,
-      //     type: 1,
-      //     typeName: null,
-      //     url: null,
-      //     userId: 1,
-      //   },
-      // ];
+    },
+    initMyFile(search) {
+      queryMyDir({
+        userId: this.userId,
+      })
+        .then((res) => {
+          if (res.flag === "SUCCESS") {
+            this.fileList = res.pageInfo?.records ?? [];
+            this.$router.replace({
+              query: { ...this.$route.query, folderId: res?.folderId },
+            });
+          } else {
+            this.$message.error(res.message || "查询失败！");
+          }
+        })
+        .catch((err) => console.log(err));
     },
 
     /**
@@ -157,7 +140,7 @@ export default {
     imgReviewData(row, visible) {
       if (row) {
         console.log("row121212.1", row.shortUrl);
-        this.imgReview.fileUrl = row.userId + row.filePath;
+        this.imgReview.fileUrl = getPreviewImageUrl(row.shortUrl, this.userId);
         this.imgReview.name = row.name;
       }
       this.imgReview.visible = visible;
@@ -172,8 +155,11 @@ export default {
     videoReviewData(row, visible) {
       console.log("videoReviewData", visible);
       if (row) {
-        this.videoReview.fileUrl = row.userId + row.filePath;
-        this.videoReview.name = row.name;
+        this.videoReview.fileUrl = getPreviewVideoUrl(
+          row.shortUrl,
+          this.userId
+        );
+        this.videoReview.name = row.documentName;
       }
       this.videoReview.visible = visible;
     },
@@ -187,7 +173,12 @@ export default {
     },
   },
   created() {
-    this.getTableDataByType(this.$store.getters.search);
+    if (this.$route.name === "MineFile" && !this.$route.query?.folderId) {
+      //我的文件
+      this.initMyFile();
+    } else {
+      this.showFileListByType(this.$store.getters.search);
+    }
   },
   computed: {
     folderId: function () {
@@ -198,8 +189,7 @@ export default {
       let folderIdList = folderIds ? folderIds.split(",") : [folderIds];
       let folderId = folderIdList[folderIdList.length - 1];
       if (!folderId) {
-        // folderId = -1;
-        folderId = 9;
+        folderId = -1;
       }
       return folderId;
     },
@@ -208,6 +198,11 @@ export default {
     },
     fileName: function () {
       return this.$route.query.fileName;
+    },
+    userId: {
+      get() {
+        return this.$store.getters.userId;
+      },
     },
   },
 };

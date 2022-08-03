@@ -1,6 +1,6 @@
 <template>
   <div class="breadcrumb-wrapper">
-    <el-breadcrumb v-if="fileType" separator="/">
+    <!-- <el-breadcrumb v-if="visible" separator="/">
       <el-breadcrumb-item>全部{{ fileTypeMap[fileType] }}</el-breadcrumb-item>
     </el-breadcrumb>
     <el-breadcrumb v-else separator="/">
@@ -10,13 +10,30 @@
         :to="{
           query: { fileName: item.path, pid: item.pid, fileType: fileType },
         }"
-        >{{ item.name }}
+        >{{ item.folderName }}
+      </el-breadcrumb-item>
+    </el-breadcrumb> -->
+    <el-breadcrumb v-if="visible" separator="/">
+      <el-breadcrumb-item
+        :to="{
+          query: {},
+        }"
+        >全部{{ fileTypeMap[fileType] }}</el-breadcrumb-item
+      >
+      <el-breadcrumb-item
+        v-for="(item, index) in breadCrumbList"
+        :key="index"
+        :to="{
+          query: { folderId: item.folderId },
+        }"
+        >{{ item.folderName }}
       </el-breadcrumb-item>
     </el-breadcrumb>
   </div>
 </template>
 
 <script>
+import { queryCrumbs } from "@/api/file";
 export default {
   name: "BreadCrumb",
   data() {
@@ -28,49 +45,74 @@ export default {
         4: "音乐",
         5: "其他",
       },
+      breadCrumbList: [],
     };
   },
-  computed: {
-    //  面包屑导航栏数组
-    breadCrumbList: function () {
-      let fileName = this.$route.query.fileName;
-      let pid = this.$route.query.pid || 0;
-      let fileNameList = fileName ? fileName.split("/") : [];
-      let pidList = pid ? pid.split(",") : [];
-      let res = []; //  返回结果数组
-      let _path = []; //  存放祖先路径
-      let _pid = []; //  存放祖先路径
-      for (let i = 0; i < fileNameList.length; i++) {
-        if (fileNameList[i]) {
-          _path.push(fileNameList[i] + "/");
-          _pid.push(pidList[i]);
-          res.push({
-            path: _path.join(""),
-            pid: _pid.join(","),
-            name: fileNameList[i],
-          });
-        } else if (i === 0) {
-          //  根目录
-          fileNameList[i] = "/";
-          pidList[i] = "0";
-          _path.push(fileNameList[i]);
-          _pid.push(pidList[i]);
-          res.push({
-            path: "/",
-            pid: _pid.join("0"),
-            name: "全部文件",
-          });
+  created() {
+    this.initCrumbs();
+  },
+  methods: {
+    initCrumbs: function () {
+      queryCrumbs({ folderId: this.folderId }).then((res) => {
+        const { flag, parentList } = res;
+        if (flag === "SUCCESS") {
+          debugger;
+          this.breadCrumbList = parentList;
+        } else {
+          // this.$message.error("文件夹创建失败");
         }
-      }
-      // return res;
-      return [
-        {
-          name: "全部",
-          path: "/",
-          pid: 1,
-        },
-      ];
+      });
     },
+  },
+  computed: {
+    folderId: function () {
+      let folderId = this.$route.query.folderId;
+      return folderId ?? "-1";
+    },
+    visible: function () {
+      const pathName = this.$route.name;
+      return pathName === "MineFile";
+    },
+    //  面包屑导航栏数组
+    // breadCrumbList: function () {
+    //   let fileName = this.$route.query.fileName;
+    //   let pid = this.$route.query.pid || 0;
+    //   let fileNameList = fileName ? fileName.split("/") : [];
+    //   let pidList = pid ? pid.split(",") : [];
+    //   let res = []; //  返回结果数组
+    //   let _path = []; //  存放祖先路径
+    //   let _pid = []; //  存放祖先路径
+    //   for (let i = 0; i < fileNameList.length; i++) {
+    //     if (fileNameList[i]) {
+    //       _path.push(fileNameList[i] + "/");
+    //       _pid.push(pidList[i]);
+    //       res.push({
+    //         path: _path.join(""),
+    //         pid: _pid.join(","),
+    //         name: fileNameList[i],
+    //       });
+    //     } else if (i === 0) {
+    //       //  根目录
+    //       fileNameList[i] = "/";
+    //       pidList[i] = "0";
+    //       _path.push(fileNameList[i]);
+    //       _pid.push(pidList[i]);
+    //       res.push({
+    //         path: "/",
+    //         pid: _pid.join("0"),
+    //         name: "全部文件",
+    //       });
+    //     }
+    //   }
+    //   // return res;
+    //   return [
+    //     {
+    //       name: "全部",
+    //       path: "/",
+    //       pid: 1,
+    //     },
+    //   ];
+    // },
     fileType: function () {
       return Number(this.$route.query.fileType);
     },

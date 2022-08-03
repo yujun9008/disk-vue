@@ -241,7 +241,7 @@ export default {
   margin: 0;
 }
 .btn-add {
-  font-size: 14px;
+  font-size: 18px;
   cursor: pointer;
   margin-right: 5px;
 }

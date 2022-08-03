@@ -28,6 +28,23 @@
           </div>
         </template>
       </el-table-column>
+      <el-table-column fit prop="fileType" show-overflow-tooltip label="类型">
+        <template slot-scope="scope">
+          <span>{{ formatType(scope.row.documentSuffix) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        fit
+        prop="createTime"
+        show-overflow-tooltip
+        label="创建时间"
+      >
+        <template slot-scope="scope">
+          <div>
+            <span>{{ scope.row.createTime }}</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column fit prop="creator" show-overflow-tooltip label="创建者">
         <template slot-scope="scope">
           <div>
@@ -35,11 +52,31 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column fit prop="fileType" show-overflow-tooltip label="类型">
+      <el-table-column fit prop="creator" show-overflow-tooltip label="操作">
         <template slot-scope="scope">
-          <span>{{ formatType(scope.row.documentSuffix) }}</span>
+          <div>
+            <el-dropdown v-if="scope.row.documentSuffix" @command="handleFile">
+              <span class="el-dropdown-link"> ... </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item
+                  :command="{ type: 'preview', file: scope.row }"
+                  v-if="!noPreviewList.includes(scope.row.documentType)"
+                  >预览</el-dropdown-item
+                >
+                <el-dropdown-item
+                  :command="{ type: 'edit', file: scope.row }"
+                  v-if="canEditList.includes(scope.row.documentType)"
+                  >编辑</el-dropdown-item
+                >
+                <el-dropdown-item :command="{ type: 'share', file: scope.row }"
+                  >分享</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </el-dropdown>
+          </div>
         </template>
       </el-table-column>
+
       <!-- <el-table-column
         label="大小"
         width="80"
@@ -58,6 +95,7 @@
 </template>
 
 <script>
+import { getPreviewDoc, getEditDoc } from "@/api/file";
 import { calculateFileSize } from "@/utils";
 
 export default {
@@ -155,9 +193,29 @@ export default {
         "bmp",
         "log",
       ],
+      canEditList:['docx','doc','xlsx','xls','csv','pptx','ppt'], //能编辑的文件
+      noPreviewList: ['txt'],//不能预览的文件
     };
   },
   methods: {
+    handleFile(e) {
+      const { type, file } = e;
+      if (type === "preview") {
+        //预览
+        if(file.documentType === 'picture'){
+          this.$emit("imgReviewData", file, true);
+        }else if(file.documentType === 'video'){
+          this.$emit("videoReviewData", file, true);
+        }else{
+            getPreviewDoc(file.shortUrl, this.userId)
+        }
+      } else if (type === "edit") {
+        //编辑
+        getEditDoc(file.shortUrl, this.userId)
+      } else if (type === "share") {
+        //分享
+      }
+    },
     /**
      * 表格数据获取相关事件
      */
@@ -204,13 +262,9 @@ export default {
     clickFileName(row) {
       //  若是目录则进入目录
       if (!row.documentSuffix) {
-        let pid = this.$route.query.pid;
-        pid = pid + "," + row.fileId;
         this.$router.push({
           query: {
-            pid: pid,
-            fileType: this.fileType,
-            fileName: row.fileName,
+            folderId: row.id,
           },
         });
       } //  若是文件，则进行相应的预览
@@ -260,6 +314,11 @@ export default {
     fileType: function () {
       return Number(this.$route.query.fileType);
     },
+     userId: {
+      get() {
+        return this.$store.getters.userId;
+      },
+    },
   },
 };
 </script>
@@ -271,5 +330,9 @@ export default {
 
 .dataTable {
   flex: 1;
+}
+.el-dropdown-link {
+  cursor: pointer;
+  color: #409eff;
 }
 </style>
