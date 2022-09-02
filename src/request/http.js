@@ -64,10 +64,15 @@ axios.interceptors.response.use(
         store.commit("CHANGE_TOKEN", response.headers.authorization);
       }
       if (response.data && response.data.code === 401) {
-        router.replace({ name: "Error_401" });
+        location.href =
+          "http://118.195.238.128:9346/dbs/auth/login?pageUrl=http://118.195.238.128:9346/index";
+        return;
+        // router.replace({ name: "Error_401" });
       }
       return Promise.resolve(response);
     }
+
+    ekse;
   },
   // 服务器状态码不是200的情况
   (error) => {
@@ -81,7 +86,9 @@ axios.interceptors.response.use(
           router.replace({ name: "Error_500" });
           break;
         case 401:
-          router.replace({ name: "Error_401" });
+          location.href =
+            "http://118.195.238.128:9346/dbs/auth/login?pageUrl=http://118.195.238.128:9346/index";
+          // router.replace({ name: "Error_401" });
           break;
         case 404:
           router.replace({ name: "Error_404" });

@@ -13,7 +13,12 @@
         >{{ item.folderName }}
       </el-breadcrumb-item>
     </el-breadcrumb> -->
-    <el-breadcrumb v-if="visible" separator="/">
+    <el-breadcrumb
+      v-if="visible"
+      separator-class="el-icon-arrow-right"
+      separator="/"
+      class="target-breadcrumb"
+    >
       <el-breadcrumb-item
         :to="{
           query: {},
@@ -71,7 +76,7 @@ export default {
     },
     visible: function () {
       const pathName = this.$route.name;
-      return pathName === "MineFile";
+      return pathName === "MineFile" || pathName === "PublicFile";
     },
     //  面包屑导航栏数组
     // breadCrumbList: function () {
@@ -135,8 +140,8 @@ export default {
 <style scoped>
 .breadcrumb-wrapper {
   padding: 0 20px;
-  height: 16px;
-  line-height: 16px;
+  height: 30px;
+  line-height: 30px;
   display: flex;
   color: #3b8cff;
   font-size: 12px;
@@ -145,9 +150,17 @@ export default {
 
 .breadcrumb-wrapper,
 >>> .el-breadcrumb {
-  height: 16px;
-  line-height: 16px;
-  font-size: 12px;
+  height: 30px;
+  line-height: 30px;
+  font-size: 14px;
   font-weight: 500 !important;
+}
+.breadcrumb-wrapper,
+>>> .el-breadcrumb__inner {
+  color: #06a7ff;
+}
+.breadcrumb-wrapper,
+>>> .el-breadcrumb__item:last-child {
+  color: #606266 !important;
 }
 </style>

@@ -9,12 +9,24 @@
     <FileTable
       :file-list="fileList"
       class="file-table"
+      @getTableDataByType="getTableDataByType"
+      @getTableDataWithPrivilege="getTableDataWithPrivilege"
       @selectionChange="selectionChange"
       @imgReviewData="imgReviewData"
       @pdfReviewData="pdfReviewData"
       @videoReviewData="videoReviewData"
+      @packReviewData="packReviewData"
       @audioReviewData="audioReviewData"
     ></FileTable>
+    <el-pagination
+      background
+      layout="prev, pager, next"
+      :hide-on-single-page="true"
+      :total="pagination.total"
+      :page-size="pagination.size"
+      @current-change="pageChange"
+    >
+    </el-pagination>
     <ImgReview
       :imgReview="imgReview"
       @imgReviewData="imgReviewData"
@@ -49,6 +61,8 @@ import {
   queryMyDir,
   getPreviewImageUrl,
   getPreviewVideoUrl,
+  getPreviewPackUrl,
+  queryWithPrivilege,
 } from "@/api/file";
 import { storageInfo } from "@/api/storage";
 
@@ -83,11 +97,17 @@ export default {
         fileUrl: "",
         name: "",
       },
+      packReview: {
+        visible: false,
+        fileUrl: "",
+        name: "",
+      },
       audioReview: {
         visible: false,
         fileUrl: "",
         name: "",
       },
+      pagination: {},
     };
   },
   methods: {
@@ -95,12 +115,21 @@ export default {
      * 表格数据获取相关事件
      */
     getTableDataByType(search) {
-      //  分类型
-      this.showFileListByType(search);
+      // this.showFileListByType(search);
+
+      if (this.$route.name === "MineFile") {
+        //我的文件
+        this.showFileListByType(this.$store.getters.search);
+      } else {
+        this.getWithPrivilege(this.$store.getters.search);
+      }
+    },
+    getTableDataWithPrivilege(search) {
+      this.getWithPrivilege(search);
     },
 
     //  根据文件类型展示文件列表
-    showFileListByType(search) {
+    showFileListByType(search, page = 1) {
       let params = {
         folderId: this.folderId,
         page: 1,
@@ -110,8 +139,30 @@ export default {
       queryFolderAndFiles(params)
         .then((res) => {
           this.fileList = res.pageInfo?.records ?? [];
+          const { total, size } = res?.pageInfo || {};
+          this.pagination = { total, size };
         })
         .catch((err) => console.log(err));
+    },
+    // 公共文件接口请求
+    getWithPrivilege(search, page = 1) {
+      let params = {
+        userId: this.userId,
+        folderId: this.folderId,
+        page,
+        size: 20,
+      };
+
+      queryWithPrivilege(params)
+        .then((res) => {
+          this.fileList = res.pageInfo?.records ?? [];
+          const { total, size } = res?.pageInfo || {};
+          this.pagination = { total: +total, size: +size };
+        })
+        .catch((err) => console.log(err));
+    },
+    pageChange(current) {
+      this.showFileListByType(this.$store.getters.search, current);
     },
     initMyFile(search) {
       queryMyDir({
@@ -123,6 +174,7 @@ export default {
             this.$router.replace({
               query: { ...this.$route.query, folderId: res?.folderId },
             });
+            localStorage.setItem("MY_FOLDER_ID", res?.folderId); //我的文件 对应的顶 id
           } else {
             this.$message.error(res.message || "查询失败！");
           }
@@ -163,6 +215,15 @@ export default {
       }
       this.videoReview.visible = visible;
     },
+    packReviewData(row, visible) {
+      console.log("packReviewData", visible);
+      if (row) {
+        this.packReview.fileUrl = getPreviewPackUrl(row.shortUrl, this.userId);
+        window.open(this.packReview.fileUrl);
+        // this.packReview.name = row.documentName;
+      }
+      this.packReview.visible = visible;
+    },
     audioReviewData(row, visible) {
       console.log("audioReviewData", visible);
       if (row) {
@@ -173,11 +234,15 @@ export default {
     },
   },
   created() {
-    if (this.$route.name === "MineFile" && !this.$route.query?.folderId) {
+    if (this.$route.name === "MineFile") {
       //我的文件
-      this.initMyFile();
+      if (!this.$route.query?.folderId) {
+        this.initMyFile();
+      } else {
+        this.showFileListByType(this.$store.getters.search);
+      }
     } else {
-      this.showFileListByType(this.$store.getters.search);
+      this.getWithPrivilege(this.$store.getters.search);
     }
   },
   computed: {
@@ -216,6 +281,10 @@ export default {
 
 .file-table {
   overflow: hidden;
-  height: calc(100vh - 176px);
+  /* height: calc(100vh - 176px); */
+}
+.el-pagination {
+  text-align: center;
+  margin: 20px 0;
 }
 </style>

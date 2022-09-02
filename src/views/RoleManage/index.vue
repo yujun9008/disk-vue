@@ -1,6 +1,11 @@
 <template>
   <div class="indexWrapper">
-    <el-button @click="resetDateFilter">新增角色</el-button>
+    <el-tabs type="border-card">
+      <el-tab-pane label="角色管理">
+        <RoleTable></RoleTable>
+      </el-tab-pane>
+    </el-tabs>
+    <!-- <el-button @click="resetDateFilter">新增角色</el-button>
     <el-divider></el-divider>
     <table>
       <thead>
@@ -39,101 +44,27 @@
       icon="el-icon-circle-plus-outline"
       style="margin-top: 20px; margin-left: 80px"
       >新增配置</el-button
-    >
+    > -->
   </div>
 </template>
 
 <script>
 import { listDir } from "@/api/file";
+import RoleTable from "@/components/RoleTable";
 
 export default {
   name: "Index",
-  components: {},
+  components: {
+    RoleTable,
+  },
   data() {
     return {
       dialogVisible: false,
-      options: [
-        {
-          value: "张三",
-          label: "张三",
-        },
-      ],
-      options1: [
-        {
-          value: "目录管理员",
-          label: "目录管理员",
-        },
-      ],
     };
   },
-  methods: {
-    renderContent(h, { node, data, store }) {
-      return (
-        <span class="custom-tree-node">
-          <span>{node.label}</span>
-          <span>
-            <el-button
-              size="mini"
-              type="text"
-              style="margin-left:30px"
-              on-click={() => this.editModal(data)}
-            >
-              编辑权限
-            </el-button>
-          </span>
-        </span>
-      );
-    },
-    editModal(data) {
-      this.dialogVisible = true;
-    },
-
-    /**
-     * 表格勾选框事件
-     */
-    selectionChange(selection) {
-      this.selectionFile = selection;
-    },
-    //  获取查看大图的数据
-    imgReviewData(row, visible) {
-      if (row) {
-        this.imgReview.fileUrl = row.userId + row.filePath;
-        this.imgReview.name = row.name;
-      }
-      this.imgReview.visible = visible;
-    },
-    pdfReviewData(row, visible) {
-      if (row) {
-        this.pdfReview.fileUrl = row.userId + row.filePath;
-        this.pdfReview.name = row.name;
-      }
-      this.pdfReview.visible = visible;
-    },
-    videoReviewData(row, visible) {
-      console.log("videoReviewData", visible);
-      if (row) {
-        this.videoReview.fileUrl = row.userId + row.filePath;
-        this.videoReview.name = row.name;
-      }
-      this.videoReview.visible = visible;
-    },
-    audioReviewData(row, visible) {
-      console.log("audioReviewData", visible);
-      if (row) {
-        this.audioReview.fileUrl = row.userId + row.filePath;
-        this.audioReview.name = row.name;
-      }
-      this.audioReview.visible = visible;
-    },
-  },
-  created() {
-    this.getTableDataByType(this.$store.getters.search);
-  },
-  computed: {
-    fileName: function () {
-      return this.$route.query.fileName;
-    },
-  },
+  methods: {},
+  created() {},
+  computed: {},
 };
 </script>
 <style scoped>

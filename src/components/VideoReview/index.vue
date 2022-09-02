@@ -76,5 +76,7 @@ export default {
 
 .video-large {
   width: 100%;
+  height: 450px !important;
 }
+
 </style>
