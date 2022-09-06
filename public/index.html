@@ -196,8 +196,6 @@
       as="script"
     />
     <% } %>
-
-    <link rel="icon" sizes="any" href="<%= BASE_URL %>upload-sdk.css" />
   </head>
   <body>
     <div id="app">
@@ -214,6 +212,14 @@
     <script src="<%= htmlWebpackPlugin.options.cdn.js[i] %>"></script>
     <% } %>
     <!-- 使用CDN的JS文件 -->
-    <script link="<%= BASE_URL %>upload-sdk.js"></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+    <script src="https://cdn.staticfile.org/babel-standalone/6.26.0/babel.min.js"></script>
   </body>
 </html>

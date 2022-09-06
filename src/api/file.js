@@ -106,3 +106,4 @@ export const unzip = (p) => post("/file/unzip/" + p.fileId, p);
  * @returns {Promise | Promise<unknown>}
  */
 export const zip = (p) => post("/file/zip", p);
+export const getFileByte = (p) => get("/dbs/file/bytes/download", p);

@@ -80,7 +80,7 @@
                 <el-button
                   v-if="
                     officeSuffix.includes(scope.row.documentSuffix) &&
-                      scope.row.documentSuffix !== 'pdf'
+                    scope.row.documentSuffix !== 'pdf'
                   "
                   @click="
                     () => {
@@ -114,8 +114,8 @@
                 <el-button
                   v-if="
                     isPublicRoute &&
-                      scope.row.collectFlag === 0 &&
-                      scope.row.documentFlag === 'folder'
+                    scope.row.collectFlag === 0 &&
+                    scope.row.documentFlag === 'folder'
                   "
                   @click="
                     () => {
@@ -227,7 +227,8 @@
         <el-button type="primary" @click="shareVisible = false">关闭</el-button>
       </span>
     </el-dialog>
-    <div ref="react"></div>
+    <!-- <div ref="react"></div> -->
+    <mainDialog />
   </div>
 </template>
 
@@ -240,12 +241,26 @@ import {
   queryShareLink,
   addCollect,
   removeCollect,
+  getFileByte,
 } from "@/api/file";
 import { calculateFileSize } from "@/utils";
 import copy from "copy-to-clipboard";
+import { convertBase64UrlToFile, TYPE_MAP } from "./constant";
+
+import React from "react";
+// import ReactDOM from "react-dom";
+
+import MainDialog from "../../assets/publish-dialog/publish-plugin.min";
+import "../../assets/publish-dialog/main.css";
 
 export default {
   name: "FileTable",
+  components: {
+    mainDialog: MainDialog,
+  },
+  // mounted() {
+  //   ReactDOM.render(React.createElement(MainDialog), this.$refs.react);
+  // },
   props: {
     fileList: Array,
   },
@@ -487,6 +502,7 @@ export default {
         this.$router.push({
           query: {
             folderId: row.id || row.documentId,
+            groupType: row.groupType,
           },
         });
       } //  若是文件，则进行相应的预览
@@ -539,37 +555,54 @@ export default {
       }
     },
     onPublishFile(file) {
-      const options = {
-        appId: "321684f387b0cb29bb61e9d64fa29c71",
-        userName: this.userId,
-        systemName: "publish-queue-internal",
-        // "systemName":"网络拓扑图设计工具",
-        // 动态链接成果 链接地址
-        achievementTrendsUrl: `http://10.254.197.124:9099/workflow/workflow#/topoView/${file.id}`,
-        // 静态文件成果片段
-        achievement: null,
-        //  动态链接成果 缩略图
-        thumbnail: null,
-        beforeUpload: (data) => console.info("上报成果参数", data),
-        afterUpload: (data) => {
-          console.info("上报成果结果 ", data);
-          if (data.code === 200) {
-            Success("发布队列上报成功!");
-            //onOptionFlag = record => {
-            //return async () => {
-            // actions.topolaogy.editTopolaogy({
-            //   id: file.id,
-            //   delFlag: "0",
-            // });
-            // _this.onSearch();
-            //};
-            //};
-          } else {
-            this.$message.error("发布队列上报失败!" + data.msg);
-          }
-        },
-      };
-      window.UploadSDK.init(options);
+      getFileByte({
+        shortUrl: file.shortUrl || file.documentShortUrl,
+      }).then((res) => {
+        const { flag, bytes } = res;
+        if (flag === "SUCCESS") {
+          const type = TYPE_MAP[file.documentSuffix];
+          const achievement = convertBase64UrlToFile(
+            bytes,
+            file.documentName,
+            type
+          );
+          console.log("achievement", achievement);
+          const options = {
+            appId: "4902148278edc095f113945c101e",
+            userName: this.userId,
+            systemName: "database_system",
+            // "systemName":"网络拓扑图设计工具",
+            // 动态链接成果 链接地址
+            // achievementTrendsUrl: type.includes("image")
+            //   ? `http://10.254.197.124:9099/workflow/workflow#/topoView/${file.id}`
+            //   : null,
+            // 静态文件成果片段
+            achievement,
+            //  动态链接成果 缩略图
+            // thumbnail: type.includes("image") ? achievement : null,
+            thumbnail: null,
+            beforeUpload: (data) => console.info("上报成果参数", data),
+            afterUpload: (data) => {
+              console.info("上报成果结果 ", data);
+              if (data.code === 200) {
+                this.$message.success("发布队列上报成功!");
+                //onOptionFlag = record => {
+                //return async () => {
+                // actions.topolaogy.editTopolaogy({
+                //   id: file.id,
+                //   delFlag: "0",
+                // });
+                // _this.onSearch();
+                //};
+                //};
+              } else {
+                this.$message.error("发布队列上报失败!" + data.msg);
+              }
+            },
+          };
+          window.UploadSDK.init(options);
+        }
+      });
     },
   },
   computed: {
@@ -598,7 +631,7 @@ export default {
         this.$store.dispatch("setSearch", search);
       },
     },
-    isPublicRoute: function() {
+    isPublicRoute: function () {
       return this.$route.name === "PublicFile";
     },
     userId: {

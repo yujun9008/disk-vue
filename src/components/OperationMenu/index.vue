@@ -233,7 +233,7 @@ export default {
     };
   },
   methods: {
-    handleCreateDoc: function (fileType) {
+    handleCreateDoc: function(fileType) {
       this.$prompt("请输入创建文件名称", "创建文件", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
@@ -271,8 +271,8 @@ export default {
         }
       });
     },
-    uploadDirImg: function () {},
-    newDirSubmit: function () {
+    uploadDirImg: function() {},
+    newDirSubmit: function() {
       console.log(this.newDirForm);
       this.$refs.newDirForm.validate((valid) => {
         if (valid) {
@@ -285,6 +285,7 @@ export default {
               imageUrl,
               firstRootFolderId: "-1",
               creator: this.userId,
+              groupType: this.groupType,
             }).then((res) => {
               if (res.flag === "SUCCESS") {
                 this.$message({
@@ -304,6 +305,7 @@ export default {
                 imageUrl,
                 folderId: this.newDirForm.folderId,
                 updater: this.userId,
+                groupType: this.groupType,
               },
               true
             ).then((res) => {
@@ -323,7 +325,7 @@ export default {
         }
       });
     },
-    newDir: function () {
+    newDir: function() {
       this.newDirDialogVisible = true;
       return;
       // this.$prompt("请输入文件夹名称", "创建文件夹", {
@@ -345,7 +347,7 @@ export default {
       //   .catch(() => {});
     },
 
-    deleteSelectedFile: function () {
+    deleteSelectedFile: function() {
       console.log("selectionFile", this.selectionFile);
 
       let ids = [];
@@ -375,7 +377,7 @@ export default {
       })
         .then(() => {
           ids = this.selectionFile[0].documentId;
-          let data = { deleter: this.userId };
+          let data = { deleter: this.userId, groupType: this.groupType };
           const isFolder = this.selectionFile[0].documentFlag === "folder";
           if (isFolder) {
             data.folderId = ids;
@@ -398,7 +400,7 @@ export default {
         .catch(() => {});
     },
 
-    rename: function () {
+    rename: function() {
       debugger;
       const data = this.selectionFile[0];
       let name = data.documentName.split("/");
@@ -428,7 +430,7 @@ export default {
         })
           .then(({ value }) => {
             if (value && value.trim()) {
-              let data = { updater: this.userId };
+              let data = { updater: this.userId, groupType: this.groupType };
               const ids = this.selectionFile[0].documentId;
               const isFolder = this.selectionFile[0].documentFlag === "folder";
               if (isFolder) {
@@ -456,7 +458,7 @@ export default {
           .catch(() => {});
       }
     },
-    uploadSuccess: function (response) {
+    uploadSuccess: function(response) {
       if (response.flag === "SUCCESS") {
         this.$message({
           message: "上传成功",
@@ -467,7 +469,7 @@ export default {
       }
       this.$emit("getTableDataByType", this.search);
     },
-    uploadSuccess2: function (response) {
+    uploadSuccess2: function(response) {
       if (response.flag === "SUCCESS") {
         this.$message({
           message: "上传成功",
@@ -483,10 +485,10 @@ export default {
         this.$message.error("上传失败");
       }
     },
-    httpRequest: function (file) {
+    httpRequest: function(file) {
       return file;
     },
-    beforeUpload: function (file) {
+    beforeUpload: function(file) {
       console.log("file", file);
       return new Promise((resolve, reject) => {
         const fileType = (type, file) => {
@@ -522,11 +524,12 @@ export default {
           fileSize: file.size,
           folderId: this.folderId,
           uploader: this.userId,
+          groupType: this.groupType,
         };
         this.$nextTick(() => resolve());
       });
     },
-    beforeUpload2: function (file) {
+    beforeUpload2: function(file) {
       const isJPG = file.type.includes("image");
       const isLt2M = file.size / 1024 / 1024 < 50;
 
@@ -543,14 +546,15 @@ export default {
           fileSuffix: file.name?.split(".")[1],
           fileSize: file.size,
           uploader: this.userId,
+          groupType: this.groupType,
         };
         this.$nextTick(() => resolve());
       });
     },
-    searchFileByName: function () {
+    searchFileByName: function() {
       this.$emit("getTableDataByType", this.search);
     },
-    downLoad: function () {
+    downLoad: function() {
       this.selectionFile.forEach((it) => {
         getDownloadFile(it.id, it.shortUrl);
         // getDownloadFile({ fileId: it.id, shortUrl: it.shortUrl }).then(
@@ -560,15 +564,15 @@ export default {
         // );
       });
     },
-    moveTo: function () {
+    moveTo: function() {
       this.dialog();
       this.options = 1;
     },
-    copyTo: function () {
+    copyTo: function() {
       this.dialog();
       this.options = 2;
     },
-    dialog: function () {
+    dialog: function() {
       // localStorage.getItem("MY_FOLDER_ID")
       listDir({
         folderId: localStorage.getItem("MY_FOLDER_ID") ?? "-1",
@@ -578,14 +582,14 @@ export default {
       });
       this.dialogVisible = true;
     },
-    close: function () {
+    close: function() {
       this.dialogVisible = false;
       this.options = 0;
     },
-    closeNewDir: function () {
+    closeNewDir: function() {
       this.newDirDialogVisible = false;
     },
-    submit: function () {
+    submit: function() {
       if (this.options === 1) {
         this.close();
         moveDir({
@@ -669,7 +673,7 @@ export default {
     },
   },
   computed: {
-    pid: function () {
+    pid: function() {
       let pids = this.$route.query.pid;
       if (pids && pids.endsWith(",")) {
         pids = pids.substring(0, pids.length - 1);
@@ -681,11 +685,15 @@ export default {
       }
       return pid;
     },
-    folderId: function () {
+    folderId: function() {
       let folderId = this.$route.query.folderId;
       return folderId ?? "-1";
     },
-    folderType: function () {
+    groupType: function() {
+      let groupType = this.$route.query.groupType;
+      return groupType || null;
+    },
+    folderType: function() {
       let name = this.$route.name;
       const mapName = {
         minefile: "mine",
@@ -693,7 +701,7 @@ export default {
       };
       return mapName[name.toLowerCase()];
     },
-    fileType: function () {
+    fileType: function() {
       return Number(this.$route.query.fileType);
     },
     token: {
@@ -717,7 +725,7 @@ export default {
     },
   },
   watch: {
-    selectionFile: function (newVal) {
+    selectionFile: function(newVal) {
       //'zip', 'rar', 'gz', '7z'
       const ZIP = ["zip", "rar"];
 
