@@ -1,50 +1,9 @@
 <template>
   <div class="indexWrapper">
-    <el-tabs type="border-card">
-      <el-tab-pane label="角色管理">
-        <RoleTable></RoleTable>
-      </el-tab-pane>
-    </el-tabs>
-    <!-- <el-button @click="resetDateFilter">新增角色</el-button>
-    <el-divider></el-divider>
-    <table>
-      <thead>
-        <th>角色</th>
-        <th>人员</th>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <el-select v-model="value" placeholder="请选择">
-              <el-option
-                v-for="item in options1"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              >
-              </el-option>
-            </el-select>
-          </td>
-          <td>
-            <el-select v-model="value" placeholder="请选择">
-              <el-option
-                v-for="item in options"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              >
-              </el-option>
-            </el-select>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <el-button
-      icon="el-icon-circle-plus-outline"
-      style="margin-top: 20px; margin-left: 80px"
-      >新增配置</el-button
-    > -->
+    <p class="page-header">角色管理</p>
+    <div class="page-main">
+      <RoleTable></RoleTable>
+    </div>
   </div>
 </template>
 
@@ -62,6 +21,9 @@ export default {
       dialogVisible: false,
     };
   },
+  mounted() {
+    document.title = "角色管理";
+  },
   methods: {},
   created() {},
   computed: {},
@@ -69,9 +31,25 @@ export default {
 </script>
 <style scoped>
 .indexWrapper {
-  padding: 20px;
   display: block;
   margin: 0;
+  background: #f2f3f5;
+}
+.page-header {
+  height: 48px;
+  line-height: 48px;
+  background: #ffffff;
+  box-shadow: 0px -1px 0px 0px #e8e8e8 inset;
+  font-size: 16px;
+  font-family: PingFang SC, PingFang SC-Semibold;
+  font-weight: 600;
+  color: #333333;
+  padding-left: 24px;
+}
+.page-main {
+  background: #ffffff;
+  margin: 16px;
+  padding: 16px 24px 0 24px;
 }
 .btn-add {
   font-size: 18px;

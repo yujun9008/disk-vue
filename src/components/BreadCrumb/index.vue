@@ -157,10 +157,12 @@ export default {
 }
 .breadcrumb-wrapper,
 >>> .el-breadcrumb__inner {
-  color: #06a7ff;
+  /* color: #06a7ff; */
+  color: rgba(0, 0, 0, 0.45);
+  font-weight: 400;
 }
 .breadcrumb-wrapper,
 >>> .el-breadcrumb__item:last-child {
-  color: #606266 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
 }
 </style>

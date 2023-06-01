@@ -1,28 +1,36 @@
 <template>
   <div class="indexWrapper">
     <div v-if="collectFolders.length">
-      <h3>您是下列目录的收藏者</h3>
-      <Folders type="collect" :folderList="collectFolders" />
+      <h3>我的收藏</h3>
+      <Folders
+        type="collect"
+        :folderList="collectFolders"
+        @showMore="showMore"
+      />
       <el-divider></el-divider>
     </div>
     <div v-if="ownerFolders.length">
-      <h3>您是下列目录的所有者</h3>
+      <h3>我的目录</h3>
       <Folders type="owner" :folderList="ownerFolders" @showMore="showMore" />
       <el-divider></el-divider>
     </div>
     <div v-if="adminFolders.length">
-      <h3>您是下列目录的管理员</h3>
-      <Folders type="admin" :folderList="adminFolders" />
+      <h3>管理目录</h3>
+      <Folders type="admin" :folderList="adminFolders" @showMore="showMore" />
       <el-divider></el-divider>
     </div>
     <div v-if="createFolders.length">
-      <h3>您是下列目录的新增者</h3>
-      <Folders type="create" :folderList="createFolders" />
+      <h3>我的新增</h3>
+      <Folders type="create" :folderList="createFolders" @showMore="showMore" />
       <el-divider></el-divider>
     </div>
     <div v-if="displayFolders.length">
-      <h3>您是下列目录的浏览者</h3>
-      <Folders type="display" :folderList="displayFolders" />
+      <h3>我的浏览</h3>
+      <Folders
+        type="display"
+        :folderList="displayFolders"
+        @showMore="showMore"
+      />
     </div>
     <div v-if="allEmpty">
       <div class="all-empty">
@@ -33,7 +41,7 @@
 </template>
 
 <script>
-import { queryFirstPage } from "@/api/user";
+import { queryFirstPage, getLoginUserInfo } from "@/api/user";
 import Folders from "@/components/Folders";
 
 export default {
@@ -51,6 +59,9 @@ export default {
       allEmpty: false,
     };
   },
+  mounted() {
+    document.title = "首页";
+  },
   methods: {
     getFirstPage(groupType) {
       const params = {
@@ -60,11 +71,20 @@ export default {
         params.groupType = groupType;
       }
 
+      if (!this.userId) {
+        getLoginUserInfo().then((res) => {
+          params.userId = res?.data?.userId;
+        });
+      } else {
+        this.fetchFirstPage(params);
+      }
+    },
+    fetchFirstPage(params) {
       queryFirstPage(params)
         .then((res) => {
           if (res.flag === "SUCCESS") {
             if (res.total?.length) {
-              this[`${groupType}Folders`] = res.total;
+              this[`${params.groupType}Folders`] = [...res.total];
             } else {
               const {
                 collect = [],
@@ -72,6 +92,7 @@ export default {
                 admin = [],
                 create = [],
                 display = [],
+                total = [],
               } = res;
               this.collectFolders = collect;
               this.ownerFolders = owner;

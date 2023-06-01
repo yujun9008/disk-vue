@@ -32,3 +32,6 @@ export const reportUsers = (p) => post("/dbs/role/report_users", p);
 export const searchRoles = (p) => post("/dbs/role/search_roles", p);
 export const reportRoleRelation = (p) =>
   post("/dbs/role/group/report_relation", p);
+export const searchOrgUsers = (p) => post("/dbs/user/search_org_users", p);
+export const queryPrivileges = (p) => post("/dbs/privilege/user/privileges", p);
+export const queryOrgTree = (p) => post("/dbs/user/get_org_users_tree", p);

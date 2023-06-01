@@ -1,54 +1,48 @@
 <template>
   <div class="tableWrapper">
+    <p class="page-header">审核管理</p>
+    <div class="page-main">
+      <FileTable
+        :file-list="fileList"
+        :isReviewPage="true"
+        class="file-table"
+        @getTableDataByType="getTableDataByType"
+        @getTableDataWithPrivilege="getTableDataWithPrivilege"
+        @selectionChange="selectionChange"
+        @imgReviewData="imgReviewData"
+        @pdfReviewData="pdfReviewData"
+        @videoReviewData="videoReviewData"
+        @packReviewData="packReviewData"
+        @audioReviewData="audioReviewData"
+      ></FileTable>
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :hide-on-single-page="true"
+        :total="pagination.total"
+        :page-size="pagination.size"
+        @current-change="pageChange"
+      >
+      </el-pagination>
+      <ImgReview
+        :imgReview="imgReview"
+        @imgReviewData="imgReviewData"
+      ></ImgReview>
+      <PdfReview
+        :pdfReview="pdfReview"
+        @pdfReviewData="pdfReviewData"
+      ></PdfReview>
+      <VideoReview
+        :videoReview="videoReview"
+        @videoReviewData="videoReviewData"
+      ></VideoReview>
+      <AudioReview
+        :audioReview="audioReview"
+        @audioReviewData="audioReviewData"
+      ></AudioReview>
+    </div>
     <!-- 面包屑导航栏 -->
-    <BreadCrumb class="breadcrumb"></BreadCrumb>
-    <OperationMenu
-      @getTableDataByType="getTableDataByType"
-      :selectionFile="selectionFile"
-      :selectionRenameFile="selectionRenameFile"
-    ></OperationMenu>
-    <FileTable
-      :file-list="fileList"
-      class="file-table"
-      @getTableDataByType="getTableDataByType"
-      @getTableDataWithPrivilege="getTableDataWithPrivilege"
-      @selectionChange="selectionChange"
-      @renameChange="renameChange"
-      @imgReviewData="imgReviewData"
-      @pdfReviewData="pdfReviewData"
-      @videoReviewData="videoReviewData"
-      @packReviewData="packReviewData"
-      @audioReviewData="audioReviewData"
-    ></FileTable>
-    <el-pagination
-      background
-      layout="prev, pager, next"
-      :hide-on-single-page="true"
-      :total="pagination.total"
-      :page-size="pagination.size"
-      @current-change="pageChange"
-    >
-    </el-pagination>
-    <ImgReview
-      :imgReview="imgReview"
-      @imgReviewData="imgReviewData"
-    ></ImgReview>
-    <PdfReview
-      :pdfReview="pdfReview"
-      @pdfReviewData="pdfReviewData"
-    ></PdfReview>
-    <PackReview
-      :packReview="packReview"
-      @packReviewData="packReviewData"
-    ></PackReview>
-    <VideoReview
-      :videoReview="videoReview"
-      @videoReviewData="videoReviewData"
-    ></VideoReview>
-    <AudioReview
-      :audioReview="audioReview"
-      @audioReviewData="audioReviewData"
-    ></AudioReview>
+    <!-- <BreadCrumb class="breadcrumb"></BreadCrumb> -->
   </div>
 </template>
 
@@ -58,7 +52,6 @@ import OperationMenu from "@/components/OperationMenu";
 import BreadCrumb from "@/components/BreadCrumb";
 import ImgReview from "@/components/ImgReview";
 import PdfReview from "@/components/PdfReview";
-import PackReview from "@/components/PackReview";
 import VideoReview from "@/components/VideoReview";
 import AudioReview from "@/components/AudioReview";
 import {
@@ -70,6 +63,7 @@ import {
   getPreviewVideoUrl,
   getPreviewPackUrl,
   queryWithPrivilege,
+  getReviewList,
 } from "@/api/file";
 import { storageInfo } from "@/api/storage";
 
@@ -83,13 +77,11 @@ export default {
     PdfReview,
     VideoReview,
     AudioReview,
-    PackReview,
   },
   data() {
     return {
       fileList: [], //  表格数据-文件列表
       selectionFile: [],
-      selectionRenameFile: {},
       //  查看图片模态框数据
       imgReview: {
         visible: false,
@@ -117,7 +109,6 @@ export default {
         name: "",
       },
       pagination: {},
-      currentPage: 1,
     };
   },
   mounted() {
@@ -129,13 +120,7 @@ export default {
      */
     getTableDataByType(search) {
       // this.showFileListByType(search);
-      debugger;
-      if (this.$route.name === "MineFile") {
-        //我的文件
-        this.showFileListByType(this.$store.getters.search);
-      } else {
-        this.getWithPrivilege(this.$store.getters.search);
-      }
+      this.showFileListByType(this.$store.getters.search);
     },
     getTableDataWithPrivilege(search) {
       this.getWithPrivilege(search);
@@ -144,34 +129,27 @@ export default {
     //  根据文件类型展示文件列表
     showFileListByType(search, page = 1) {
       let params = {
-        folderId: this.folderId,
         page,
         size: 20,
-        documentName: search,
-        userId: this.userId,
+        reviewer: this.userId,
       };
 
-      queryFolderAndFiles(params)
+      getReviewList(params)
         .then((res) => {
           this.fileList = res.pageInfo?.records ?? [];
           const { total, size } = res?.pageInfo || {};
-          this.pagination = { total, size };
+          this.pagination = { total: +total, size: +size };
         })
         .catch((err) => console.log(err));
     },
     // 公共文件接口请求
     getWithPrivilege(search, page = 1) {
-      let cPage = page;
-      if (this.currentPage != 1) {
-        cPage = this.currentPage;
-      }
       let params = {
         userId: this.userId,
         folderId: this.folderId,
-        page: cPage,
+        page,
         size: 20,
         documentName: search,
-        groupType: this.groupType || null,
       };
 
       queryWithPrivilege(params)
@@ -183,15 +161,7 @@ export default {
         .catch((err) => console.log(err));
     },
     pageChange(current) {
-      this.currentPage = current;
-      // this.showFileListByType(this.$store.getters.search, current);
-
-      if (this.$route.name === "MineFile") {
-      
-          this.showFileListByType(this.$store.getters.search, current);
-      } else {
-        this.getWithPrivilege(this.$store.getters.search, current);
-      }
+      this.showFileListByType(this.$store.getters.search, current);
     },
     initMyFile(search) {
       queryMyDir({
@@ -216,9 +186,6 @@ export default {
      */
     selectionChange(selection) {
       this.selectionFile = selection;
-    },
-    renameChange(selection) {
-      this.selectionRenameFile = selection;
     },
     //  获取查看大图的数据
     imgReviewData(row, visible) {
@@ -250,23 +217,14 @@ export default {
       this.videoReview.visible = visible;
     },
     packReviewData(row, visible) {
-      // if (row) {
-      //   // this.packReview.fileUrl = getPreviewPackUrl(
-      //   //   row.documentShortUrl || row.shortUrl,
-      //   //   this.userId
-      //   // );
-      //   window.open(this.packReview.fileUrl);
-      //   // this.packReview.name = row.documentName;
-      // }
-      // this.packReview.visible = visible;
-
+      console.log("packReviewData", visible);
       if (row) {
         this.packReview.fileUrl = getPreviewPackUrl(
           row.documentShortUrl || row.shortUrl,
           this.userId
         );
-        debugger;
-        this.packReview.name = row.name || row.documentName;
+        window.open(this.packReview.fileUrl);
+        // this.packReview.name = row.documentName;
       }
       this.packReview.visible = visible;
     },
@@ -280,16 +238,7 @@ export default {
     },
   },
   created() {
-    if (this.$route.name === "MineFile") {
-      //我的文件
-      if (!this.$route.query?.folderId) {
-        this.initMyFile();
-      } else {
-        this.showFileListByType();
-      }
-    } else {
-      this.getWithPrivilege();
-    }
+    this.showFileListByType();
   },
   computed: {
     folderId: function () {
@@ -310,10 +259,6 @@ export default {
     fileName: function () {
       return this.$route.query.fileName;
     },
-    groupType: function () {
-      let groupType = this.$route.query.groupType;
-      return groupType || null;
-    },
     userId: {
       get() {
         return this.$store.getters.userId;
@@ -324,17 +269,32 @@ export default {
 </script>
 <style scoped>
 .tableWrapper {
-  padding: 20px;
   width: 100%;
   display: block;
+  background: #f2f3f5;
 }
 
 .file-table {
   overflow: hidden;
-  /* height: calc(100vh - 176px); */
 }
 .el-pagination {
   text-align: center;
   margin: 20px 0;
+}
+.page-header {
+  height: 48px;
+  line-height: 48px;
+  background: #ffffff;
+  box-shadow: 0px -1px 0px 0px #e8e8e8 inset;
+  font-size: 16px;
+  font-family: PingFang SC, PingFang SC-Semibold;
+  font-weight: 600;
+  color: #333333;
+  padding-left: 24px;
+}
+.page-main {
+  background: #ffffff;
+  margin: 16px;
+  padding: 16px 24px 0 24px;
 }
 </style>

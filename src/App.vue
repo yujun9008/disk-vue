@@ -2,11 +2,11 @@
   <div id="app">
     <el-container>
       <el-header v-if="isHeaderShow">
-        <Header/>
+        <Header />
       </el-header>
       <el-container>
-        <el-aside width="200px" class="aside" v-if="isHeaderShow">
-          <Aside/>
+        <el-aside width="82px" class="aside" v-if="isHeaderShow">
+          <Aside />
         </el-aside>
         <el-main>
           <router-view class="mainContent" :key="$route.fullPath"></router-view>
@@ -17,23 +17,23 @@
 </template>
 
 <script>
-import Header from '@/components/Header'
-import Aside from '@/components/Aside'
+import Header from "@/components/Header";
+import Aside from "@/components/Aside";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     Header,
-    Aside
+    Aside,
   },
   computed: {
     //  头部是否显示
     isHeaderShow() {
-      let routerNameList = ['Error_401', 'Error_404', 'Error_500'];
+      let routerNameList = ["Error_401", "Error_404", "Error_500"];
       return !routerNameList.includes(this.$route.name);
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style>
@@ -46,7 +46,6 @@ export default {
 
 .mainContent {
   flex: 1;
-  width: 90%;
   min-height: calc(100vh - 60px);
   margin: 0 auto;
   display: flex;
@@ -58,11 +57,12 @@ export default {
 }
 
 .el-header {
+  height: 64px !important;
   padding: 0 !important;
 }
 
 .el-aside {
-  border-right: solid 1px #e6e6e6 !important;;
+  border-right: solid 1px #e6e6e6 !important;
 }
 
 .aside {

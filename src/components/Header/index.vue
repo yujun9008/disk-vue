@@ -1,5 +1,9 @@
 <template>
   <div class="headerWrapper">
+    <a href="/" class="header-logo">
+      <img :src="logoImage" />
+      协作办公
+    </a>
     <div class="header-right">
       <!--右侧下拉框-->
       <el-dropdown @command="handleCommand">
@@ -31,7 +35,8 @@ export default {
   name: "Header",
   data() {
     return {
-      size: "large",
+      size: "small",
+      logoImage: require("@/assets/images/logo.png"),
     };
   },
   methods: {
@@ -44,7 +49,7 @@ export default {
         })
           .then(() => {
             // return this.$store.dispatch("LogOut");
-            location.href = `http://118.195.238.128:9346/dbs/auth/logout?originPageUrl=http://118.195.238.128:9346`;
+            location.href = `http://129.211.209.226:9346/dbs/auth/logout?originPageUrl=http://129.211.209.226:9346`;
           })
           .then(() => {
             // location.reload();
@@ -88,9 +93,23 @@ export default {
   width: 100%;
   padding: 0 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  height: 50px;
-  line-height: 50px;
-  background-color: #4ab7bd;
+  height: 64px;
+  line-height: 64px;
+  background-color: #1ca0eb;
+}
+.header-logo {
+  display: inline-block;
+  color: #fff;
+  padding-left: 45px;
+  font-weight: bold;
+  font-size: 28px;
+  font-family: YouSheBiaoTiHei, YouSheBiaoTiHei-Regular;
+}
+.header-logo img {
+  width: 50px;
+  position: fixed;
+  left: 12px;
+  top: 6px;
 }
 
 .header-right {

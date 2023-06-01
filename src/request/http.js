@@ -65,7 +65,7 @@ axios.interceptors.response.use(
       }
       if (response.data && response.data.code === 401) {
         location.href =
-          "http://118.195.238.128:9346/dbs/auth/login?pageUrl=http://118.195.238.128:9346/index";
+          "http://129.211.209.226:9346/dbs/auth/login?pageUrl=http://129.211.209.226:9346";
         return;
         // router.replace({ name: "Error_401" });
       }
@@ -82,12 +82,12 @@ axios.interceptors.response.use(
 
     if (error.response.status) {
       switch (error.response.status) {
-        case 500:
-          router.replace({ name: "Error_500" });
-          break;
+        // case 500:
+        //   router.replace({ name: "Error_500" });
+        //   break;
         case 401:
-          location.href =
-            "http://118.195.238.128:9346/dbs/auth/login?pageUrl=http://118.195.238.128:9346/index";
+          location.href = `http://129.211.209.226:9346/dbs/auth/login?pageUrl=${location.href}`;
+          // location.href = "http://118.195.238.128:9346/dbs/auth/login?pageUrl=http://118.195.238.128:9346";
           // router.replace({ name: "Error_401" });
           break;
         case 404:
@@ -128,10 +128,10 @@ export function get(url, params) {
  * info为 true，formData格式；
  * info为 undefined或false，是json格式
  */
-export function post(url, data = {}) {
+export function post(url, data = {}, params) {
   return new Promise((resolve, reject) => {
     axios
-      .post(url, data)
+      .post(url, data, { params })
       .then((res) => {
         resolve(res.data);
       })

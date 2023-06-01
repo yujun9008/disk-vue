@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="file-table-container">
     <el-scrollbar :native="false" tag="section" :noresize="false">
       <el-table
         class="dataTable"
@@ -27,6 +27,7 @@
           prop="fileName"
           show-overflow-tooltip
           label="文件名"
+          width="300"
         >
           <template slot-scope="scope">
             <div style="cursor: pointer" @click="clickFileName(scope.row)">
@@ -34,9 +35,31 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column fit prop="fileType" show-overflow-tooltip label="类型">
+
+        <el-table-column
+          fit
+          prop="fileType"
+          show-overflow-tooltip
+          label="类型"
+          width="100"
+        >
           <template slot-scope="scope">
-            <span>{{ formatType(scope.row.document_suffix) }}</span>
+            <span>{{ formatType(scope.row.documentSuffix) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          fit
+          prop="fileType"
+          show-overflow-tooltip
+          v-if="isPublicRoute"
+          label="审核状态"
+          width="100"
+        >
+          <template slot-scope="scope">
+            <ReviewStatePopover
+              :row="scope.row"
+              @getTableDataWithPrivilege="reGetTableData"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -44,6 +67,7 @@
           prop="createTime"
           show-overflow-tooltip
           label="创建时间"
+          width="170"
         >
           <template slot-scope="scope">
             <div>
@@ -56,6 +80,7 @@
           prop="creator"
           show-overflow-tooltip
           label="创建者"
+          width="120"
         >
           <template slot-scope="scope">
             <div>
@@ -63,21 +88,73 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column fit prop="creator" show-overflow-tooltip label="操作">
+        <el-table-column
+          fit
+          prop="documentBelongFolderName"
+          show-overflow-tooltip
+          label="归属目录"
+          v-if="isReviewPage"
+          width="150"
+        >
           <template slot-scope="scope">
             <div>
-              <div v-if="scope.row.documentSuffix">
+              <span>{{ scope.row.documentBelongFolderName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          fit
+          prop="creator"
+          show-overflow-tooltip
+          :label="handleText"
+        >
+          <template slot-scope="scope">
+            <div>
+              <div v-if="isReviewPage">
                 <el-button
+                  size="small"
                   v-if="!noPreviewList.includes(scope.row.documentType)"
                   @click="
                     () => {
                       handleFile('preview', scope.row);
                     }
                   "
-                  type="text"
+                  >预览</el-button
+                >
+
+                <el-button
+                  size="small"
+                  @click="
+                    () => {
+                      handleFile('reviewPass', scope.row);
+                    }
+                  "
+                  >通过</el-button
+                >
+                <el-button
+                  size="small"
+                  @click="
+                    () => {
+                      handleFile('reviewReject', scope.row);
+                    }
+                  "
+                  style="color: #f3475c"
+                  >驳回</el-button
+                >
+              </div>
+              <div v-else-if="scope.row.documentSuffix">
+                <el-button
+                  size="small"
+                  v-if="!noPreviewList.includes(scope.row.documentType)"
+                  @click="
+                    () => {
+                      handleFile('preview', scope.row);
+                    }
+                  "
                   >预览</el-button
                 >
                 <el-button
+                  size="small"
                   v-if="
                     officeSuffix.includes(scope.row.documentSuffix) &&
                     scope.row.documentSuffix !== 'pdf'
@@ -87,31 +164,53 @@
                       handleFile('edit', scope.row);
                     }
                   "
-                  type="text"
                   >编辑</el-button
                 >
                 <el-button
-                  v-if="isPublicRoute"
+                  size="small"
                   @click="
                     () => {
                       handleFile('share', scope.row);
                     }
                   "
-                  type="text"
                   >分享</el-button
                 >
                 <el-button
+                  size="small"
                   @click="
                     () => {
                       handleFile('publish', scope.row);
                     }
                   "
-                  type="text"
                   >发布</el-button
                 >
+                <el-button
+                  size="small"
+                  @click="
+                    () => {
+                      handleFile('rename', scope.row);
+                    }
+                  "
+                  >设置</el-button
+                >
+                <el-button
+                  size="small"
+                  v-if="
+                    isPublicRoute &&
+                    ['admin', 'create', 'owner'].includes(groupType)
+                  "
+                  @click="
+                    () => {
+                      handleFile('moveFile', scope.row);
+                    }
+                  "
+                  >移动</el-button
+                >
               </div>
+              <!-- 目录 -->
               <div v-else>
                 <el-button
+                  size="small"
                   v-if="
                     isPublicRoute &&
                     scope.row.collectFlag === 0 &&
@@ -122,18 +221,82 @@
                       handleFolder('collect', scope.row);
                     }
                   "
-                  type="text"
                   >收藏</el-button
                 >
                 <el-button
+                  size="small"
                   v-if="isPublicRoute && scope.row.collectFlag === 1"
                   @click="
                     () => {
                       handleFolder('removeCollect', scope.row);
                     }
                   "
-                  type="text"
                   >取消收藏</el-button
+                >
+                <!-- <el-button
+                  size="small"
+                  v-if="
+                    isPublicRoute &&
+                    scope.row.reviewState === 1 &&
+                    scope.row.documentFlag === 'folder'
+                  "
+                  @click="
+                    () => {
+                      handleFolder('review', scope.row);
+                    }
+                  "
+                  >审核</el-button
+                >
+                <el-button
+                  size="small"
+                  v-if="isPublicRoute && scope.row.reviewState === 0"
+                  @click="
+                    () => {
+                      handleFolder('removeReview', scope.row);
+                    }
+                  "
+                  >取消审核</el-button
+                > -->
+                <el-button
+                  size="small"
+                  @click="
+                    () => {
+                      handleFile('folderShare', scope.row);
+                    }
+                  "
+                  >分享</el-button
+                >
+                <el-button
+                  size="small"
+                  @click="
+                    () => {
+                      handleFile('rename', scope.row);
+                    }
+                  "
+                  >设置</el-button
+                >
+                <el-button
+                  size="small"
+                  v-if="isPublicRoute && scope.row.groupType === 'admin'"
+                  @click="
+                    () => {
+                      handleFile('privilege', scope.row);
+                    }
+                  "
+                  >权限</el-button
+                >
+                <el-button
+                  size="small"
+                  v-if="
+                    isPublicRoute &&
+                    ['admin', 'create', 'owner'].includes(scope.row.groupType)
+                  "
+                  @click="
+                    () => {
+                      handleFile('move', scope.row);
+                    }
+                  "
+                  >移动</el-button
                 >
               </div>
 
@@ -194,78 +357,125 @@
       </el-table-column> -->
       </el-table>
     </el-scrollbar>
-    <el-dialog title="分享" :visible.sync="shareVisible" width="40%">
-      分享类型&nbsp;&nbsp;
-      <el-radio-group
-        v-model="shareType"
-        @change="switchShareType"
-        style="margin-bottom: 10px"
-        v-if="officeSuffix.includes(targetFile.documentSuffix)"
-      >
-        <el-radio label="view">预览</el-radio>
-        <el-radio label="edit">编辑</el-radio>
-        <el-radio label="download">下载</el-radio>
-      </el-radio-group>
-      <div style="margin: 10px 0">
-        分享时效&nbsp;&nbsp;
-        <el-select
-          v-model="aliveDays"
-          @change="switchExpDate"
-          size="small"
-          style="width: 97px"
-        >
-          <el-option value="3" label="3天"></el-option>
-          <el-option value="7" label="7天"></el-option>
-          <el-option value="30" label="30天"></el-option>
-          <el-option value="9999" label="长期"></el-option>
-        </el-select>
+    <el-dialog title="分享" :visible.sync="shareVisible" width="50%">
+      <!-- <div v-if="isFolderShare" style="margin-bottom: 10px">
+        
+      </div> -->
+      <div v-if="!isFolderShare" class="share-container">
+        <div class="item">
+          分享类型&nbsp;&nbsp;
+          <el-radio-group v-model="shareType" @change="switchShareType">
+            <el-radio label="download">下载</el-radio>
+            <el-radio
+              label="view"
+              v-if="officeSuffix.includes(targetFile.documentSuffix)"
+              >预览</el-radio
+            >
+            <el-radio
+              label="edit"
+              v-if="officeSuffix.includes(targetFile.documentSuffix)"
+              >编辑</el-radio
+            >
+          </el-radio-group>
+        </div>
+        <div class="item">
+          分享范围&nbsp;&nbsp;
+          <el-radio-group v-model="shareFlag" @change="switchShareFlag">
+            <el-radio label="inner">内部</el-radio>
+            <el-radio label="outer">外部</el-radio>
+          </el-radio-group>
+        </div>
+        <div class="item" style="margin: 10px 0">
+          分享时效&nbsp;&nbsp;
+          <el-select
+            v-model="aliveDays"
+            @change="switchExpDate"
+            size="small"
+            style="width: 97px"
+          >
+            <el-option value="3" label="3天"></el-option>
+            <el-option value="7" label="7天"></el-option>
+            <el-option value="30" label="30天"></el-option>
+            <el-option value="9999" label="长期"></el-option>
+          </el-select>
+        </div>
       </div>
-      <el-input :value="shareValue" size="small" readonly>
-        <el-button slot="append" @click="handleCopy">复制</el-button>
+
+      <el-input :value="shareValue" size="small" readonly class="share-input">
+        <el-button size="small" slot="append" @click="handleCopy" type="primary"
+          >复制</el-button
+        >
       </el-input>
       <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="shareVisible = false">关闭</el-button>
+        <el-button size="small" type="primary" @click="shareVisible = false"
+          >关闭</el-button
+        >
       </span>
     </el-dialog>
     <!-- <div ref="react"></div> -->
-    <mainDialog />
+    <!-- <mainDialog /> -->
+    <PrivilegeEditDialog
+      :dialogVisible="dialogVisible"
+      :targetFolder="targetFolder"
+      @closeModal="handleCloseModal"
+    />
+    <MoveFolderDialog
+      :dialogVisible="moveDialogVisible"
+      :targetFolder="targetFolder"
+      :targetFile="targetFile"
+      :isMoveFile="isMoveFile"
+      @closeModal="handleCloseModal"
+    />
   </div>
 </template>
 
 <script>
+import ReviewStatePopover from "@/components/ReviewStatePopover";
+import PrivilegeEditDialog from "@/components/PrivilegeEditDialog";
+import MoveFolderDialog from "@/components/MoveFolderDialog";
 import {
   getPreviewDoc,
   getEditDoc,
   getPreviewImageUrl,
   getPreviewVideoUrl,
   queryShareLink,
+  queryFolderShare,
   addCollect,
   removeCollect,
   getFileByte,
+  reviewProcess,
+  setFolderReviewFlag,
 } from "@/api/file";
 import { calculateFileSize } from "@/utils";
 import copy from "copy-to-clipboard";
 import { convertBase64UrlToFile, TYPE_MAP } from "./constant";
+import JsZip from "jszip";
 
 import React from "react";
 // import ReactDOM from "react-dom";
 
-import MainDialog from "../../assets/publish-dialog/publish-plugin.min";
+// import MainDialog from "../../assets/publish-dialog/publish-plugin.min";
+// import "../../assets/publish-dialog/main.css";
+import MainDialog from "../../assets/publish-dialog/publish-dialog";
 import "../../assets/publish-dialog/main.css";
 
 export default {
   name: "FileTable",
   components: {
-    mainDialog: MainDialog,
+    ReviewStatePopover,
+    PrivilegeEditDialog,
+    MoveFolderDialog,
   },
   // mounted() {
   //   ReactDOM.render(React.createElement(MainDialog), this.$refs.react);
   // },
   props: {
     fileList: Array,
+    isReviewPage: Boolean,
   },
   data() {
     return {
+      dialogVisible: false,
       //  文件图片Map映射
       fileImgMap: {
         dir: require("@/assets/images/file/dir.png"),
@@ -358,14 +568,27 @@ export default {
       canEditList: ["word", "docx", "doc", "xlsx", "xls", "csv", "pptx", "ppt"], //能编辑的文件
       noPreviewList: ["txt"], //不能预览的文件
       shareVisible: false,
-      shareType: "view",
+      isFolderShare: false,
+      shareType: "download",
+      shareFlag: "inner",
       targetFile: {},
+      targetFolder: {},
       aliveDays: "3",
       shareValue: "",
+      visible: false,
+      moveDialogVisible: false,
+      isMoveFile: false,
     };
   },
 
   methods: {
+    handleCloseModal() {
+      this.dialogVisible = false;
+      this.moveDialogVisible = false;
+    },
+    reGetTableData() {
+      this.$emit("getTableDataByType", this.search);
+    },
     handleFile(type, file) {
       if (type === "preview") {
         //预览
@@ -383,15 +606,104 @@ export default {
       } else if (type === "edit") {
         //编辑
         window.open(
-          getEditDoc(file.shortUrl || file.documentShortUrl, this.userId)
+          getEditDoc(
+            file.shortUrl || file.documentShortUrl,
+            this.userId,
+            this.groupType
+          )
         );
       } else if (type === "share") {
         //分享
         this.targetFile = file;
+        this.shareType = "download";
+
         this.getShareLink();
+      } else if (type === "folderShare") {
+        //目录分享
+        this.targetFolder = file;
+        this.getShareLink(true);
       } else if (type === "publish") {
         this.onPublishFile(file);
+      } else if (type === "reviewPass") {
+        //审核通过
+        this.onReviewFile(file, true);
+      } else if (type === "reviewReject") {
+        //审核驳回
+        this.onReviewFile(file, false);
+      } else if (type === "rename") {
+        this.onRename(file);
+      } else if (type === "privilege") {
+        this.dialogVisible = true;
+        this.targetFolder = file;
+      } else if (type === "move") {
+        this.moveDialogVisible = true;
+        this.isMoveFile = false;
+        this.targetFolder = file;
+      }else if (type === "moveFile") {
+        this.moveDialogVisible = true;
+        this.isMoveFile = true;
+        this.targetFile = file;
       }
+    },
+    onRename(data) {
+      this.$emit("renameChange", data);
+      debugger;
+      // let name = data.documentName.split("/");
+      // let document_image_url = data.document_image_url;
+      // name = name[name.length - 1];
+      // let names = name.split(".");
+      // let fileSuffix = names[names.length - 1];
+      // name = name.replace("." + fileSuffix, "");
+      // if (data.documentFlag === "folder" && this.folderType === "public") {
+      //   //有缩略图
+      //   this.newDirDialogTitle = "编辑文件夹";
+      //   this.newDirDialogVisible = true;
+      //   this.newDirForm.imageUrl = document_image_url;
+      //   this.newDirForm.folderName = name;
+      //   this.newDirForm.folderId = data.documentId || data.id;
+      //   // this.newDirForm.reviewState = !data.reviewState;
+      // } else {
+      //   this.$prompt("请输入新的名称", "设置", {
+      //     confirmButtonText: "确定",
+      //     cancelButtonText: "取消",
+      //     inputValue: name,
+      //     inputValidator: (value) => {
+      //       if (value.trim().length < 1) {
+      //         return "文件名不能为空";
+      //       }
+      //     },
+      //     inputErrorMessage: "文件名不能为空",
+      //   })
+      //     .then(({ value }) => {
+      //       if (value && value.trim()) {
+      //         let data = { updater: this.userId, groupType: this.groupType };
+      //         const ids =
+      //           this.selectionFile[0].documentId || this.selectionFile[0].id;
+      //         const isFolder = this.selectionFile[0].documentFlag === "folder";
+      //         if (isFolder) {
+      //           data.folderId = ids;
+      //           data.folderName = value;
+      //         } else {
+      //           data.fileId = ids;
+      //           data.fileName = value;
+      //         }
+      //         renameFile(data, isFolder).then((res) => {
+      //           if (res.flag === "SUCCESS") {
+      //             this.$message({
+      //               message: "操作成功",
+      //               type: "success",
+      //             });
+      //             this.$emit("getTableDataByType", this.search);
+      //           } else {
+      //             this.$message.error(res?.response ?? "重命名失败");
+      //           }
+      //         });
+      //       } else {
+      //         this.$message.error("文件名不能为空");
+      //       }
+      //     })
+      //     .catch(() => {});
+      // }
     },
     handleFolder(type, file) {
       if (type === "collect") {
@@ -418,7 +730,44 @@ export default {
             this.$message.error(res?.message ?? "取消收藏失败！");
           }
         });
+      } else if (type === "review") {
+        //审核
+        this.changeReviewState(0, file.id || file.documentId);
+      } else if (type === "removeReview") {
+        //取消审核
+        this.changeReviewState(1, file.id || file.documentId);
       }
+    },
+    changeReviewState(reviewState, folderId) {
+      setFolderReviewFlag({
+        folderId,
+        reviewState, //0需要审核（默认），1表示不需要审核
+        userId: this.userId,
+        groupType: this.groupType,
+      }).then((res) => {
+        if (res.flag === "SUCCESS") {
+          this.$message.success(res.message);
+          this.$emit("getTableDataWithPrivilege", this.search);
+        } else {
+          this.$message.error(res.message);
+        }
+      });
+    },
+    onReviewFile(file, flag) {
+      const params = {
+        fileId: file.id || file.documentId,
+        reviewer: this.userId,
+        flag,
+      };
+      reviewProcess(params).then((res) => {
+        const action = flag ? "通过" : "驳回";
+        if (res.flag === "SUCCESS") {
+          this.$message.success(`${action}成功`);
+        } else {
+          this.$message.error(res?.message ?? `${action}失败`);
+        }
+        this.$emit("getTableDataByType");
+      });
     },
     handleCopy(e) {
       if (copy(this.shareValue)) {
@@ -429,28 +778,52 @@ export default {
       this.shareType = e;
       this.getShareLink();
     },
+    switchShareFlag(e) {
+      this.shareFlag = e;
+      this.getShareLink();
+    },
     switchExpDate(e) {
       this.aliveDays = e;
       this.getShareLink();
     },
-    getShareLink() {
+    getShareLink(isFolder) {
       const file = this.targetFile;
-      queryShareLink({
-        fileId: file.id || file.documentId,
-        // fileType: file.documentSuffix,
-        fileType: file.documentType,
-        shortUrl: file.shortUrl || file.documentShortUrl,
-        shareType: this.shareType,
-        aliveDays: this.aliveDays,
-        creator: this.userId,
-      }).then((res) => {
-        if (res.flag === "SUCCESS") {
-          this.shareVisible = true;
-          this.shareValue = res?.linkContent;
-        } else {
-          this.$message.error(res?.message ?? "获取链接失败");
-        }
-      });
+      debugger;
+      if (isFolder) {
+        queryFolderShare({
+          userId: this.userId,
+          folderId: this.targetFolder.id,
+          shareFlag: this.shareFlag,
+        }).then((res) => {
+          if (res.flag === "SUCCESS") {
+            this.isFolderShare = true;
+            this.shareVisible = true;
+            this.shareValue = res?.link;
+          } else {
+            this.$message.error(res?.message ?? "获取链接失败");
+          }
+        });
+      } else {
+        queryShareLink({
+          fileId: file.id || file.documentId,
+          // fileType: file.documentSuffix,
+          fileType: file.documentType,
+          shortUrl: file.shortUrl || file.documentShortUrl,
+          shareType: this.shareType,
+          aliveDays: this.aliveDays,
+          creator: this.userId,
+          shareFlag: this.shareFlag,
+          groupType: file.groupType || this.groupType,
+        }).then((res) => {
+          if (res.flag === "SUCCESS") {
+            this.isFolderShare = false;
+            this.shareVisible = true;
+            this.shareValue = res?.linkContent;
+          } else {
+            this.$message.error(res?.message ?? "获取链接失败");
+          }
+        });
+      }
     },
 
     /**
@@ -478,8 +851,13 @@ export default {
       this.$emit("selectionChange", selection);
     },
     formatName(row) {
-      let name = row.documentName.split(".");
-      return name[0];
+      if (row.documentFlag === "folder") {
+        return row.documentName;
+      } else {
+        const names = row.documentName.split(".");
+        const others = names.slice(0, names.length - 1);
+        return others.join(".");
+      }
     },
     formatType(type) {
       if (!type) {
@@ -606,23 +984,9 @@ export default {
     },
   },
   computed: {
-    // shareValue: function() {
-    //   const file = this.targetFile;
-    //   const expParam = `&aliveDays=${this.aliveDays}`;
-    //   if (this.shareType === "edit") {
-    //     //可编辑链接 其他都预览链接
-    //     return getEditDoc(file?.shortUrl, this.userId) + expParam;
-    //   } else if (this.shareType === "download") {
-    //   } else {
-    //     if (file.documentType === "picture") {
-    //       return getPreviewImageUrl(file?.shortUrl, this.userId) + expParam;
-    //     } else if (file.documentType === "video") {
-    //       return getPreviewVideoUrl(file?.shortUrl, this.userId) + expParam;
-    //     } else {
-    //       return getPreviewDoc(file.shortUrl, this.userId) + expParam;
-    //     }
-    //   }
-    // },
+    handleText: function () {
+      return this._props.isReviewPage ? "审核操作" : "操作";
+    },
     search: {
       get() {
         return this.$store.getters.search;
@@ -633,6 +997,10 @@ export default {
     },
     isPublicRoute: function () {
       return this.$route.name === "PublicFile";
+    },
+    groupType: function () {
+      let groupType = this.$route.query.groupType;
+      return groupType || null;
     },
     userId: {
       get() {
@@ -654,5 +1022,48 @@ export default {
 .el-dropdown-link {
   cursor: pointer;
   color: #409eff;
+}
+.share-input {
+  height: 45px;
+}
+.share-input /deep/ .el-input__inner {
+  height: 45px;
+}
+.share-input /deep/ .el-input__inner {
+  height: 45px;
+}
+
+.share-input /deep/ .el-input-group__append {
+  color: #fff;
+  background-color: #409eff;
+  border-color: #409eff;
+}
+.file-table /deep/ .el-table th.el-table__cell {
+  background: #1ca0eb;
+  color: #fff;
+  padding: 6px 0;
+}
+</style>
+
+<style>
+.el-pagination {
+  text-align: right !important;
+}
+.el-scrollbar {
+  padding-bottom: 20px;
+}
+.el-pagination {
+  margin: 0 0 20px;
+}
+.file-table-container {
+  padding-bottom: 30px;
+}
+.share-container {
+  position: relative;
+  top: -20px;
+}
+.share-container .item {
+  height: 40px;
+  line-height: 40px;
 }
 </style>

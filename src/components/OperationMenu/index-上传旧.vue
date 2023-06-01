@@ -17,8 +17,8 @@
           name="file"
           multiple
           :action="action"
-          :on-change="handleUploadChange"
-          :auto-upload="false"
+          :http-request="chunkedUpload"
+          :before-upload="beforeUpload"
         >
           <el-button
             type="primary"
@@ -65,12 +65,7 @@
           icon="el-icon-delete"
           >删除
         </el-button>
-        <el-button
-          style="display: none"
-          plain
-          size="small"
-          @click="rename"
-          :disabled="!isReName"
+        <el-button plain size="small" @click="rename" :disabled="!isReName"
           >设置</el-button
         >
         <!-- <el-button plain size="small" :disabled="!isCopy" @click="copyTo"
@@ -114,35 +109,6 @@
           ></el-button
         ></el-input>
       </div>
-      <el-dialog
-        title="上传文件"
-        :visible.sync="upoadModalVisible"
-        :before-close="handleClearFile"
-      >
-        <div v-if="showProgress">
-          <el-progress
-            :text-inside="true"
-            :stroke-width="26"
-            :percentage="progressPercentage"
-          ></el-progress>
-        </div>
-        <div v-for="(file, index) in fileList" :key="index">
-          <p
-            v-if="fileList.length > 1 && fileSizeLimitArr.includes(file.name)"
-            class="limt-file"
-          >
-            {{ file.name }}(文件大小超过{{
-              parseInt(fileMaxLimit / 1024 / 1024)
-            }}M阈值，请单独上传！)
-          </p>
-          <p v-else>{{ file.name }}</p>
-        </div>
-        <span slot="footer" class="dialog-footer">
-          <el-button size="small" @click="submitUpload" type="primary" :loading="showProgress"
-            >点击上传</el-button
-          >
-        </span>
-      </el-dialog>
       <el-dialog title="文件移动到" :visible.sync="dialogVisible" width="30%">
         <el-tree
           :data="dirData"
@@ -207,11 +173,7 @@
               >
             </el-upload>
           </el-form-item>
-          <!-- <el-form-item
-            label="审核开关"
-            prop="auditSwitch"
-            v-if="folderType === 'public'"
-          >
+          <el-form-item label="审核开关" prop="auditSwitch">
             <el-switch
               v-model="newDirForm.reviewState"
               active-text="需要审核"
@@ -219,7 +181,7 @@
               @change="changeReviewState"
             >
             </el-switch>
-          </el-form-item> -->
+          </el-form-item>
         </el-form>
         <span slot="footer" class="dialog-footer">
           <el-button @click="closeNewDir">取 消</el-button>
@@ -260,7 +222,6 @@ export default {
   name: "OperationMenu",
   props: {
     selectionFile: Array,
-    selectionRenameFile: Object,
   },
   data() {
     return {
@@ -296,19 +257,11 @@ export default {
         folderName: "",
         imageUrl: "",
         folderId: null,
-        // reviewState: false,
+        reviewState: false,
       },
       subFoldersNum: 0,
       subFilesNum: 0,
       showFileList: true,
-      upoadModalVisible: false,
-      fileList: [],
-      showProgress: false,
-      progressPercentage: 0,
-      defaultChunkSize: 3 * 1024 * 1024, // 切片大小
-      fileMaxLimit: 1 * 1024 * 1024, // 文件大小限制
-      fileSizeLimitArr: [],
-
       // fileList: new FormData(),
     };
   },
@@ -317,48 +270,23 @@ export default {
     this.$store.dispatch("setSearch", "");
   },
   methods: {
-    handleClearFile() {
-      this.fileList = [];
-      this.fileSizeLimitArr = [];
-      this.upoadModalVisible = false;
-    },
-    // changeReviewState(reviewState) {
-    //   debugger;
-    //   if (this.newDirForm.folderId == -1) {
-    //     return;
-    //   }
-    //   setFolderReviewFlag({
-    //     folderId: this.newDirForm.folderId,
-    //     reviewState: reviewState ? 0 : 1, //0需要审核（默认），1表示不需要审核
-    //     userId: this.userId,
-    //     groupType: this.groupType,
-    //   }).then((res) => {
-    //     if (res.flag === "SUCCESS") {
-    //       this.$message.success(res.message);
-    //     } else {
-    //       this.$message.error(res.message);
-    //     }
-    //   });
-    // },
-    handleUploadChange(file, fileList) {
-      this.fileList = [...this.fileList, file.raw];
-      if (file.size > this.fileMaxLimit) {
-        this.fileSizeLimitArr.push(file.name);
+    changeReviewState(reviewState) {
+      debugger;
+      if (this.newDirForm.folderId == -1) {
+        return;
       }
-      this.upoadModalVisible = true;
-    },
-    submitUpload() {
-      this.showProgress = true;
-      if (this.fileList.length > 1) {
-        this.multUpload(this.fileList);
-      } else {
-        const file = this.fileList[0];
-        if (file.size <= this.defaultChunkSize) {
-          this.multUpload(this.fileList);
+      setFolderReviewFlag({
+        folderId: this.newDirForm.folderId,
+        reviewState: reviewState ? 0 : 1, //0需要审核（默认），1表示不需要审核
+        userId: this.userId,
+        groupType: this.groupType,
+      }).then((res) => {
+        if (res.flag === "SUCCESS") {
+          this.$message.success(res.message);
         } else {
-          this.chunkedUpload(file);
+          this.$message.error(res.message);
         }
-      }
+      });
     },
     createFileChunk(file, size) {
       const fileChunkList = [];
@@ -371,99 +299,46 @@ export default {
       }
       return fileChunkList;
     },
-    async chunkedUpload(file) {
-      const params = this.getUploadParam(file);
+    chunkedUpload(param) {
+      const params = this.getUploadParam(param.file);
 
-      const fileChunkList = this.createFileChunk(
-        params.get("file"),
-        this.defaultChunkSize
-      );
+      //创建切片
+      var chunkSize = 0.5 * 1024 * 1024; // 切片大小
+      const fileChunkList = this.createFileChunk(params.get("file"), chunkSize);
 
-      const fileChunkLength = fileChunkList.length;
-
-      params.set("file", fileChunkList[0].file);
+      fileChunkList.forEach(({ file }) => {
+        params.file = file;
+        // console.log("file参数", params.file);
+        // appendFile(params).then((res) => {
+        //   if (res.flag === "SUCCESS") {
+        //     console.log("s", res.flag);
+        //   }
+        // });
+        this.fetchChunkFile(params);
+      });
+    },
+    async fetchChunkFile(params) {
       const result = await appendFile(params);
-      this.progressPercentage = parseInt((1 / fileChunkLength) * 100);
-      if (result.flag === "SUCCESS" && result.shorturl) {
-        params.set("shortUrl", result.shorturl);
+      console.log("result", result);
+      if (result.flag === "SUCCESS") {
       } else {
-        this.showProgress = false;
-        this.progressPercentage = 0;
         this.$message.error(result.message);
-        return;
       }
-
-      for (let i = 0; i <= fileChunkLength; i++) {
-        if (i > 0) {
-          params.set("file", fileChunkList[i].file);
-          const res = await this.fetchChunkFile(params);
-          this.progressPercentage = parseInt((i / fileChunkLength) * 100);
-          if (res.flag && i + 1 === fileChunkLength) {
+    },
+    uploadBpmn(param) {
+      const params = this.getUploadParam(param.file);
+      uploadFile(params)
+        .then((res) => {
+          if (res.flag === "SUCCESS") {
             this.$message.success(res.message);
-            this.upoadModalVisible = false;
-            this.fileList = [];
-            this.fileSizeLimitArr = [];
             this.$emit("getTableDataByType", this.search);
-
-            this.showProgress = false;
-            this.progressPercentage = 0;
-          }
-        }
-      }
-    },
-    fetchChunkFile(params) {
-      return new Promise((resolve, reject) => {
-        appendFile(params).then((res) => {
-          if (res.flag === "SUCCESS") {
-            resolve(res);
           } else {
-            // this.showProgress = false;
             this.$message.error(res.message);
           }
+        })
+        .catch((error) => {
+          this.$message({ type: "error", message: error });
         });
-      });
-    },
-    multUpload(files) {
-      const len = files.length;
-      let index = 0;
-
-      files.forEach((file) => {
-        // if (file.size > this.fileMaxLimit) {
-        //   this.$message.error(
-        //     `${file.name}文件大小超过${parseInt(
-        //       this.fileMaxLimit / 1024 / 1024
-        //     )}M阈值，请单独上传！`
-        //   );
-        //   index++;
-        //   return;
-        // }
-        if (len > 1 && this.fileSizeLimitArr.includes(file.name)) {
-          index++;
-          return;
-        }
-
-        const params = this.getUploadParam(file);
-        uploadFile(params).then((res) => {
-          index++;
-          this.progressPercentage = parseInt((index / len) * 100);
-          if (res.flag === "SUCCESS") {
-            if (index === len) {
-              this.$message.success(res.message);
-              this.upoadModalVisible = false;
-              this.fileList = [];
-              this.fileSizeLimitArr = [];
-              this.$emit("getTableDataByType", this.search);
-
-              this.showProgress = false;
-              this.progressPercentage = 0;
-            }
-          } else {
-            this.progressPercentage = 0;
-            this.showProgress = false;
-            this.$message.error(res.message);
-          }
-        });
-      });
     },
     queryStatistics: function () {
       getFolderStatistics({
@@ -506,9 +381,7 @@ export default {
               });
               this.$emit("getTableDataByType", this.search);
               setTimeout(() => {
-                window.open(
-                  getEditDoc(res.shortUrl, res.creator, this.groupType)
-                );
+                window.open(getEditDoc(res.shortUrl, res.creator));
               }, 1000);
             } else {
               this.$message.error("创建失败");
@@ -524,23 +397,18 @@ export default {
       console.log(this.newDirForm);
       this.$refs.newDirForm.validate((valid) => {
         if (valid) {
-          const { folderName, imageUrl } = this.newDirForm;
+          const { folderName, imageUrl, reviewState } = this.newDirForm;
           if (this.newDirDialogTitle === "新建文件夹") {
-            const mkParams = {
+            mkdir({
               parentFolderId: this.folderId,
               folderType: this.folderType,
               folderName,
               imageUrl,
+              reviewState: reviewState ? 0 : 1, //0需要审核，1表示不需要审核
               firstRootFolderId: "-1",
               creator: this.userId,
               groupType: this.groupType,
-            };
-
-            // if (this.folderType === "public") {
-            //   mkParams.reviewState = reviewState ? 0 : 1; //0需要审核，1表示不需要审核
-            // }
-
-            mkdir(mkParams).then((res) => {
+            }).then((res) => {
               if (res.flag === "SUCCESS") {
                 this.$message({
                   message: "文件夹创建成功",
@@ -580,8 +448,6 @@ export default {
       });
     },
     newDir: function () {
-      this.newDirForm.folderName = "";
-      this.newDirForm.imageUrl = "";
       this.newDirDialogVisible = true;
       return;
       // this.$prompt("请输入文件夹名称", "创建文件夹", {
@@ -616,13 +482,13 @@ export default {
           documentFlag = fi.documentFlag;
         } else {
           if (documentFlag !== fi.documentFlag) {
+            this.$message.error("目录和文件请分开删除！");
             canDelete = false;
           }
         }
       });
 
       if (!canDelete) {
-        this.$message.error("目录和文件请分开删除！");
         return;
       }
 
@@ -636,16 +502,7 @@ export default {
           let data = { deleter: this.userId, groupType: this.groupType };
           const isFolder = this.selectionFile[0].documentFlag === "folder";
           if (isFolder) {
-            if (this.selectionFile.length > 1) {
-              data.folderList = this.selectionFile.map((item) => {
-                return {
-                  folderId: item.id,
-                  groupType: this.groupType,
-                };
-              });
-            } else {
-              data.folderId = ids;
-            }
+            data.folderId = ids;
           } else {
             data.fileIds = this.selectionFile.map((i) => i.documentId || i.id);
           }
@@ -680,9 +537,9 @@ export default {
       return documentFlag;
     },
 
-    rename: function (targetFile) {
+    rename: function () {
       debugger;
-      const data = targetFile || this.selectionFile[0];
+      const data = this.selectionFile[0];
       let name = data.documentName.split("/");
       let document_image_url = data.document_image_url;
       name = name[name.length - 1];
@@ -696,7 +553,7 @@ export default {
         this.newDirForm.imageUrl = document_image_url;
         this.newDirForm.folderName = name;
         this.newDirForm.folderId = data.documentId || data.id;
-        // this.newDirForm.reviewState = !data.reviewState;
+        this.newDirForm.reviewState = !data.reviewState;
       } else {
         this.$prompt("请输入新的名称", "设置", {
           confirmButtonText: "确定",
@@ -711,16 +568,16 @@ export default {
         })
           .then(({ value }) => {
             if (value && value.trim()) {
-              const target = targetFile || this.selectionFile[0];
               let data = { updater: this.userId, groupType: this.groupType };
-              const ids = target.documentId || target.id;
-              const isFolder = target.documentFlag === "folder";
+              const ids =
+                this.selectionFile[0].documentId || this.selectionFile[0].id;
+              const isFolder = this.selectionFile[0].documentFlag === "folder";
               if (isFolder) {
                 data.folderId = ids;
                 data.folderName = value;
               } else {
                 data.fileId = ids;
-                data.fileName = `${value}.${target.documentSuffix}`;
+                data.fileName = value;
               }
               renameFile(data, isFolder).then((res) => {
                 if (res.flag === "SUCCESS") {
@@ -795,13 +652,13 @@ export default {
           return "excel";
         } else {
           // return "document";
-          return file.name.split(".")?.reverse()[0];
+          return file.name.split(".")[1];
         }
       };
       const params = {
         fileName: file.name,
         fileType: fileType(file.type, file),
-        fileSuffix: file.name?.split(".")?.reverse()[0],
+        fileSuffix: file.name?.split(".")[1],
         fileSize: file.size,
         folderId: this.folderId,
         uploader: this.userId,
@@ -930,9 +787,7 @@ export default {
     },
     close: function () {
       this.dialogVisible = false;
-      this.showProgress = false;
       this.options = 0;
-      this.progressPercentage = 0;
     },
     closeNewDir: function () {
       this.newDirDialogVisible = false;
@@ -1092,16 +947,6 @@ export default {
         ZIP.includes(newVal[0].extendName);
       this.compress = newVal !== undefined && newVal.length > 0;
     },
-    selectionRenameFile: {
-      immediate: true,
-
-      handler: function (newVal) {
-        console.log(newVal.documentName);
-        if (newVal && newVal.id) {
-          this.rename(newVal);
-        }
-      },
-    },
   },
 };
 </script>
@@ -1181,8 +1026,5 @@ export default {
   position: absolute;
   top: 24px;
   right: 0;
-}
-.limt-file {
-  color: red;
 }
 </style>

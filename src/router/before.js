@@ -18,6 +18,17 @@ router.beforeEach((to, from, next) => {
       }
     });
   }
+  // if (store.getters.userId && !store.getters.userPrivileges) {
+  //   store.dispatch("getUserPrivileges").then(() => {
+  //     if (!store.getters.hasPrivileges) {
+  //       next({
+  //         path: "/401",
+  //       });
+  //     } else {
+  //       next({ ...to, replace: true });
+  //     }
+  //   });
+  // }
 
   //   if (to.query.token) {
   //     store.commit("CHANGE_TOKEN", to.query.token);

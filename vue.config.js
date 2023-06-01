@@ -142,7 +142,7 @@ module.exports = {
       //     }
       // },
       "/dbs": {
-        target: "http://118.195.238.128:9345", //novel后台接口，连接本地服务
+        target: "http://129.211.209.226:9345", //novel后台接口，连接本地服务
         ws: true,
         //是否跨域
         changeOrigin: true,
@@ -151,7 +151,7 @@ module.exports = {
         },
       },
       [process.env.VUE_APP_BASE_API]: {
-        target: "http://118.195.238.128:9345", //api后台接口，连接本地服务
+        target: "http://129.211.209.226:9345", //api后台接口，连接本地服务
         ws: true,
         //是否跨域
         changeOrigin: true,

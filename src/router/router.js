@@ -3,7 +3,6 @@ import Router from "vue-router";
 
 Vue.use(Router);
 
-
 export default new Router({
   mode: "history",
   base: process.env.BASE_URL,
@@ -14,9 +13,6 @@ export default new Router({
       redirect: (to) => {
         return {
           path: "/index",
-          query: {
-            token: to.query.token,
-          },
         };
       },
     },
@@ -38,11 +34,17 @@ export default new Router({
         import(/* webpackChunkName: "publicfile" */ "@/views/File"),
     },
     {
-      path: "/directorymanage",
-      name: "DirectoryManage",
+      path: "/reviewmanage",
+      name: "ReviewManage",
+      component: () =>
+        import(/* webpackChunkName: "publicfile" */ "@/views/ReviewManage"),
+    },
+    {
+      path: "/privilegemanage",
+      name: "PrivilegeManage",
       component: () =>
         import(
-          /* webpackChunkName: "directorymanage" */ "@/views/DirectoryManage"
+          /* webpackChunkName: "privilegemanage" */ "@/views/PrivilegeManage"
         ),
     },
     {
