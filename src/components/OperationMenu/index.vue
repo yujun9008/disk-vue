@@ -1,14 +1,16 @@
 <template>
   <div>
     <div class="all-statistics">
-      <span
+      <span v-if="!isRecentFilePage"
         >目录<b>{{ subFoldersNum }}</b></span
-      ><span
+      >
+      <span
         >文件<b>{{ subFilesNum }}</b></span
       >
     </div>
     <div class="operation-menu-wrapper">
-      <el-button-group class="operation-buttons">
+      <div class="operation-menu-inner" v-if="!isRecentFilePage">
+      <el-button-group  class="operation-buttons">
         <!-- :file-list="fileList" -->
         <!-- :http-request="uploadBpmn" -->
         <el-upload
@@ -48,6 +50,7 @@
           >新建文件夹</el-button
         >
       </el-button-group>
+      </div>
       <el-button-group class="operation-buttons">
         <el-button
           plain
@@ -64,6 +67,24 @@
           :disabled="!isDelete"
           icon="el-icon-delete"
           >删除
+        </el-button>
+         <el-button
+          plain
+          size="small"
+          v-if="isRecentFilePage"
+          @click="singleMoveTo"
+          :disabled="!isMove"
+          icon="el-icon-guide"
+          >移动
+        </el-button>
+         <el-button
+          plain
+          size="small"
+          v-else
+          @click="moveTo"
+          :disabled="!isMove"
+          icon="el-icon-guide"
+          >批量移动
         </el-button>
         <el-button
           style="display: none"
@@ -99,7 +120,7 @@
       <div class="image-model" style="display: none">
         <a><i class="el-icon-menu"></i></a>
       </div>
-      <div class="search">
+      <div class="search" v-if="!isRecentFilePage">
         <el-input
           v-model="search"
           :placeholder="searchPlaceholder"
@@ -226,6 +247,13 @@
           <el-button type="primary" @click="newDirSubmit">确 定</el-button>
         </span>
       </el-dialog>
+      <MoveFolderDialog
+      :dialogVisible="moveDialogVisible"
+      :selectionFile="selectionFile"
+      :isMoveFile="isMoveFile"
+      :isRecentFilePage="isRecentFilePage"
+      @closeModal="handleCloseModal"
+    />
     </div>
   </div>
 </template>
@@ -255,13 +283,20 @@ import {
 import dir from "@/assets/images/file/dir.png";
 import { Loading } from "element-ui";
 import { calculateFileSize } from "@/utils";
+import MoveFolderDialog from "@/components/MoveFolderDialog";
 
 export default {
   name: "OperationMenu",
   props: {
+    isRecentFilePage: Boolean,
     selectionFile: Array,
+    recentFileList: Array,
     selectionRenameFile: Object,
   },
+  components: {
+    MoveFolderDialog,
+  },
+  
   data() {
     return {
       action: `${process.env.VUE_APP_BASE_API}/dbs/file/uploadFile`,
@@ -308,15 +343,23 @@ export default {
       defaultChunkSize: 3 * 1024 * 1024, // 切片大小
       fileMaxLimit: 1 * 1024 * 1024, // 文件大小限制
       fileSizeLimitArr: [],
+      moveDialogVisible: false,
+      isMoveFile: true,
 
       // fileList: new FormData(),
     };
   },
   created() {
-    this.queryStatistics();
+    if(this.recentFileList){
+    }else{
+      this.queryStatistics();
+    }
     this.$store.dispatch("setSearch", "");
   },
   methods: {
+    handleCloseModal() {
+      this.moveDialogVisible = false;
+    },
     handleClearFile() {
       this.fileList = [];
       this.fileSizeLimitArr = [];
@@ -667,8 +710,10 @@ export default {
     //folder/file/mix
     getSelectionType: function () {
       let documentFlag = "";
+      if(this.isRecentFilePage){
+        return 'file'
+      }
       (this.selectionFile || []).forEach((fi, i) => {
-        debugger;
         if (i === 0) {
           documentFlag = fi.documentFlag;
         } else {
@@ -900,19 +945,41 @@ export default {
       if (this.getSelectionType() === "mix") {
         this.$message.error("目录和文件不能同时选择");
         return;
-      } else {
-      }
-      this.selectionFile.forEach((it) => {
-        if (this.getSelectionType() === "file") {
-          getDownloadFile(it.id, it.shortUrl);
-        } else {
+      }else if(this.getSelectionType() === "file"){
+         if(this.selectionFile.length > 1){
+            const ids = this.selectionFile.map(it => it.id || it.documentId);
+            getDownloadFile(ids.join(','), '');
+         }else{
+          const it = this.selectionFile[0];
+           getDownloadFile(it.id || it.documentId, it.shortUrl);
+         }
+      }else{
+        this.selectionFile.forEach((it) => {
           getDownloadFolder(it.id);
-        }
-      });
+        });
+      }
+      
     },
     moveTo: function () {
-      this.dialog();
-      this.options = 1;
+      const selectionType = this.getSelectionType();
+
+      if(selectionType === 'mix'){
+        this.$message.error("目录和文件不能同时移动");
+        return;
+      }
+
+      this.isMoveFile = selectionType === 'file';
+      this.moveDialogVisible = true;
+    },
+    singleMoveTo: function () {
+
+      if(this.selectionFile?.length > 1){
+        this.$message.error("仅支持一个文件移动");
+        return;
+      }
+
+      this.isMoveFile = true;
+      this.moveDialogVisible = true;
     },
     copyTo: function () {
       this.dialog();
@@ -1077,6 +1144,9 @@ export default {
     },
   },
   watch: {
+    recentFileList: function(newVal){
+      this.subFilesNum = newVal?.length || 0
+    },
     selectionFile: function (newVal) {
       //'zip', 'rar', 'gz', '7z'
       const ZIP = ["zip", "rar"];
@@ -1097,7 +1167,7 @@ export default {
 
       handler: function (newVal) {
         console.log(newVal.documentName);
-        if (newVal && newVal.id) {
+        if (newVal && (newVal.id || newVal.documentId)) {
           this.rename(newVal);
         }
       },
@@ -1111,6 +1181,9 @@ export default {
   height: 60px;
   line-height: 60px;
   display: block;
+}
+.operation-menu-inner{
+  display: inline-block;
 }
 
 .upload-demo {

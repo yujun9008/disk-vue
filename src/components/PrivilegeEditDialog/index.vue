@@ -152,10 +152,13 @@ export default {
           label: "新增者",
         },
         {
+          value: "upload",
+          label: "创建者",
+        },
+        {
           value: "admin",
           label: "管理员",
-        },
-   
+        }
       ],
       groupType: "display",
       props: {

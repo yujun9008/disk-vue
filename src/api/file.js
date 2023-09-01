@@ -19,6 +19,7 @@ export const queryWithPrivilege = (p) =>
 export const moveFolder = (p) => post("/dbs/folder/move_folder", p);
 
 export const listDir = (p) => post("/dbs/folder/query_sub_folders", p);
+export const queryLogs = (p) => post("/dbs/folder/query_logs", p);
 export const queryFileList = (p) => post("/dbs/folder/query_sub_files", p);
 export const queryFolderAndFiles = (p) => post("/dbs/folder/query", p);
 export const queryCrumbs = (p) => post("/dbs/folder/query_crumbs", p);
@@ -103,6 +104,7 @@ export const copyDir = (p) => post("/file/copyDir", p);
  * @returns {Promise | Promise<unknown>}
  */
 export const listDirTree = (p) => get("/file/listDirTree", p);
+export const listRecentFile = (p) => post("/dbs/file/recent/process", p);
 /**
  * 下载文件
  * @param p
@@ -135,5 +137,5 @@ export const searchOrgUsersTree = (p) =>
   post("/dbs/user/search_org_users_tree", p);
 export const setFolderReviewFlag = (p) =>
   post("/dbs/folder/set_folder_review_flag", p);
-export const moveFile = (p) =>
-  post("/dbs/file/move", p);
+export const moveFile = (p) => post("/dbs/file/move", p);
+export const batchMoveFile = (p) => post("/dbs/file/batch_move", p);

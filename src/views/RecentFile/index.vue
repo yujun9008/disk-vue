@@ -1,14 +1,15 @@
 <template>
   <div class="tableWrapper">
-    <!-- 面包屑导航栏 -->
-    <BreadCrumb class="breadcrumb"></BreadCrumb>
     <OperationMenu
+      :isRecentFilePage="true"
+      :recentFileList="fileList"
       @getTableDataByType="getTableDataByType"
       :selectionFile="selectionFile"
       :selectionRenameFile="selectionRenameFile"
     ></OperationMenu>
     <FileTable
       :file-list="fileList"
+      :isRecentFilePage="true"
       class="file-table"
       @getTableDataByType="getTableDataByType"
       @getTableDataWithPrivilege="getTableDataWithPrivilege"
@@ -20,7 +21,7 @@
       @packReviewData="packReviewData"
       @audioReviewData="audioReviewData"
     ></FileTable>
-    <el-pagination
+    <!-- <el-pagination
       background
       layout="prev, pager, next"
       :hide-on-single-page="true"
@@ -28,7 +29,7 @@
       :page-size="pagination.size"
       @current-change="pageChange"
     >
-    </el-pagination>
+    </el-pagination> -->
     <ImgReview
       :imgReview="imgReview"
       @imgReviewData="imgReviewData"
@@ -70,6 +71,7 @@ import {
   getPreviewVideoUrl,
   getPreviewPackUrl,
   queryWithPrivilege,
+  listRecentFile,
 } from "@/api/file";
 import { storageInfo } from "@/api/storage";
 
@@ -121,95 +123,41 @@ export default {
     };
   },
   mounted() {
-    document.title = this.$route.name === "MineFile" ? "我的文件" : "公共文件";
+    document.title =  "最近文件";
   },
   methods: {
     /**
      * 表格数据获取相关事件
      */
     getTableDataByType(search) {
-      // this.showFileListByType(search);
-      debugger;
-      if (this.$route.name === "MineFile") {
-        //我的文件
-        this.showFileListByType(this.$store.getters.search);
-      } else {
-        this.getWithPrivilege(this.$store.getters.search);
-      }
+      this.fetchListRecentFile(search)
     },
     getTableDataWithPrivilege(search) {
       this.getWithPrivilege(search);
     },
 
+
     //  根据文件类型展示文件列表
-    showFileListByType(search, page = 1) {
+    fetchListRecentFile(search, page = 1) {
       let params = {
-        folderId: this.folderId,
-        page,
-        size: 20,
-        documentName: search,
+        // page,
+        // size: 20,
+        // documentName: search,
         userId: this.userId,
       };
 
-      queryFolderAndFiles(params)
+      listRecentFile(params)
         .then((res) => {
-          this.fileList = res.pageInfo?.records ?? [];
-          const { total, size } = res?.pageInfo || {};
-          this.pagination = { total, size };
+          this.fileList = res.fileList ?? [];
         })
         .catch((err) => console.log(err));
     },
-    // 公共文件接口请求
-    getWithPrivilege(search, page = 1) {
-      let cPage = page;
-      if (this.currentPage != 1) {
-        cPage = this.currentPage;
-      }
-      let params = {
-        userId: this.userId,
-        folderId: this.folderId,
-        page: cPage,
-        size: 20,
-        documentName: search,
-        groupType: this.groupType || null,
-      };
+   
+    // pageChange(current) {
+    //   this.currentPage = current;
+    //   this.fetchListRecentFile(this.$store.getters.search, current);
 
-      queryWithPrivilege(params)
-        .then((res) => {
-          this.fileList = res.pageInfo?.records ?? [];
-          const { total, size } = res?.pageInfo || {};
-          this.pagination = { total: +total, size: +size };
-        })
-        .catch((err) => console.log(err));
-    },
-    pageChange(current) {
-      this.currentPage = current;
-      // this.showFileListByType(this.$store.getters.search, current);
-
-      if (this.$route.name === "MineFile") {
-      
-          this.showFileListByType(this.$store.getters.search, current);
-      } else {
-        this.getWithPrivilege(this.$store.getters.search, current);
-      }
-    },
-    initMyFile(search) {
-      queryMyDir({
-        userId: this.userId,
-      })
-        .then((res) => {
-          if (res.flag === "SUCCESS") {
-            this.fileList = res.pageInfo?.records ?? [];
-            this.$router.replace({
-              query: { ...this.$route.query, folderId: res?.folderId },
-            });
-            localStorage.setItem("MY_FOLDER_ID", res?.folderId); //我的文件 对应的顶 id
-          } else {
-            this.$message.error(res.message || "查询失败！");
-          }
-        })
-        .catch((err) => console.log(err));
-    },
+    // },
 
     /**
      * 表格勾选框事件
@@ -250,15 +198,6 @@ export default {
       this.videoReview.visible = visible;
     },
     packReviewData(row, visible) {
-      // if (row) {
-      //   // this.packReview.fileUrl = getPreviewPackUrl(
-      //   //   row.documentShortUrl || row.shortUrl,
-      //   //   this.userId
-      //   // );
-      //   window.open(this.packReview.fileUrl);
-      //   // this.packReview.name = row.documentName;
-      // }
-      // this.packReview.visible = visible;
 
       if (row) {
         this.packReview.fileUrl = getPreviewPackUrl(
@@ -280,30 +219,9 @@ export default {
     },
   },
   created() {
-    if (this.$route.name === "MineFile") {
-      //我的文件
-      if (!this.$route.query?.folderId) {
-        this.initMyFile();
-      } else {
-        this.showFileListByType();
-      }
-    } else {
-      this.getWithPrivilege();
-    }
+    this.getTableDataByType();
   },
   computed: {
-    folderId: function () {
-      let folderIds = this.$route.query.folderId;
-      if (folderIds && folderIds.endsWith(",")) {
-        folderIds = folderIds.substring(0, folderIds.length - 1);
-      }
-      let folderIdList = folderIds ? folderIds.split(",") : [folderIds];
-      let folderId = folderIdList[folderIdList.length - 1];
-      if (!folderId) {
-        folderId = -1;
-      }
-      return folderId;
-    },
     fileType: function () {
       return Number(this.$route.query.fileType);
     },

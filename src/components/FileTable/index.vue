@@ -66,7 +66,22 @@
           fit
           prop="createTime"
           show-overflow-tooltip
+          label="修改时间"
+          v-if="isRecentFilePage"
+          width="170"
+        >
+          <template slot-scope="scope">
+            <div>
+              <span>{{ scope.row.createTime }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          fit
+          prop="createTime"
+          show-overflow-tooltip
           label="创建时间"
+          v-else
           width="170"
         >
           <template slot-scope="scope">
@@ -145,6 +160,16 @@
               <div v-else-if="scope.row.documentSuffix">
                 <el-button
                   size="small"
+                  v-if="isRecentFilePage"
+                  @click="
+                    () => {
+                      handleFile('openFolder', scope.row);
+                    }
+                  "
+                  >打开所属文件夹</el-button
+                >
+                <el-button
+                  size="small"
                   v-if="!noPreviewList.includes(scope.row.documentType)"
                   @click="
                     () => {
@@ -193,7 +218,7 @@
                   "
                   >设置</el-button
                 >
-                <el-button
+                <!-- <el-button
                   size="small"
                   v-if="
                     isPublicRoute &&
@@ -205,7 +230,7 @@
                     }
                   "
                   >移动</el-button
-                >
+                > -->
               </div>
               <!-- 目录 -->
               <div v-else>
@@ -285,7 +310,7 @@
                   "
                   >权限</el-button
                 >
-                <el-button
+                <!-- <el-button
                   size="small"
                   v-if="
                     isPublicRoute &&
@@ -297,6 +322,19 @@
                     }
                   "
                   >移动</el-button
+                > -->
+                <el-button
+                  size="small"
+                  v-if="
+                    isPublicRoute &&
+                    ['admin'].includes(scope.row.groupType)
+                  "
+                  @click="
+                    () => {
+                      handleFile('logs', scope.row);
+                    }
+                  "
+                  >日志</el-button
                 >
               </div>
 
@@ -406,11 +444,21 @@
           >复制</el-button
         >
       </el-input>
-      <span slot="footer" class="dialog-footer">
+      <span slot="footer" class="dia-logfooter">
         <el-button size="small" type="primary" @click="shareVisible = false"
           >关闭</el-button
         >
       </span>
+    </el-dialog>
+    <el-dialog title="操作日志" :visible.sync="logsVisible" width="50%">
+      <div class="logs-list">
+        <p
+        v-for="(item,index) in logsList"
+        :key="index"
+      >
+        <span slot="title">{{ item }}</span>
+      </p>
+      </div>
     </el-dialog>
     <!-- <div ref="react"></div> -->
     <!-- <mainDialog /> -->
@@ -423,6 +471,7 @@
       :dialogVisible="moveDialogVisible"
       :targetFolder="targetFolder"
       :targetFile="targetFile"
+      :selectionFile="selectionFile"
       :isMoveFile="isMoveFile"
       @closeModal="handleCloseModal"
     />
@@ -445,10 +494,11 @@ import {
   getFileByte,
   reviewProcess,
   setFolderReviewFlag,
+  queryLogs,
 } from "@/api/file";
 import { calculateFileSize } from "@/utils";
 import copy from "copy-to-clipboard";
-import { convertBase64UrlToFile, TYPE_MAP } from "./constant";
+import { convertBase64UrlToFile, TYPE_MAP,getBase64Img,changeBase64ToBlob } from "./constant";
 import JsZip from "jszip";
 
 import React from "react";
@@ -472,6 +522,7 @@ export default {
   props: {
     fileList: Array,
     isReviewPage: Boolean,
+    isRecentFilePage: Boolean,
   },
   data() {
     return {
@@ -578,6 +629,9 @@ export default {
       visible: false,
       moveDialogVisible: false,
       isMoveFile: false,
+      logsVisible:false,
+      logsList:[],
+      selectionFile:[]
     };
   },
 
@@ -589,6 +643,7 @@ export default {
     reGetTableData() {
       this.$emit("getTableDataByType", this.search);
     },
+
     handleFile(type, file) {
       if (type === "preview") {
         //预览
@@ -643,11 +698,32 @@ export default {
         this.moveDialogVisible = true;
         this.isMoveFile = true;
         this.targetFile = file;
+      }else if (type === "logs") {
+        this.logsVisible = true;
+        this.fetchLogs(file.id || file.documentId);
+      }else if(type ==='openFolder'){
+        this.$router.push({
+        path: "/minefile",
+        query: {
+          folderId: file.folderId,
+        },
+      });
       }
+    },
+    fetchLogs(folderId){
+      queryLogs({
+        folderId,
+        userId: this.userId,
+      }).then((res) => {
+        if (res.flag === "SUCCESS") {
+          this.logsList = res.logs || []
+        } else {
+          this.$message.error(res.message);
+        }
+      });
     },
     onRename(data) {
       this.$emit("renameChange", data);
-      debugger;
       // let name = data.documentName.split("/");
       // let document_image_url = data.document_image_url;
       // name = name[name.length - 1];
@@ -848,13 +924,14 @@ export default {
      */
     //  表格-全选事件, selectoin 勾选的行数据
     selectionChange(selection) {
+      this.selectionFile = selection;
       this.$emit("selectionChange", selection);
     },
     formatName(row) {
       if (row.documentFlag === "folder") {
         return row.documentName;
       } else {
-        const names = row.documentName.split(".");
+        const names = row.documentName?.split(".");
         const others = names.slice(0, names.length - 1);
         return others.join(".");
       }
@@ -933,55 +1010,74 @@ export default {
       }
     },
     onPublishFile(file) {
-      getFileByte({
-        shortUrl: file.shortUrl || file.documentShortUrl,
-      }).then((res) => {
-        const { flag, bytes } = res;
-        if (flag === "SUCCESS") {
-          const type = TYPE_MAP[file.documentSuffix];
-          const achievement = convertBase64UrlToFile(
-            bytes,
-            file.documentName,
-            type
-          );
-          console.log("achievement", achievement);
-          const options = {
-            appId: "4902148278edc095f113945c101e",
-            userName: this.userId,
-            systemName: "database_system",
-            // "systemName":"网络拓扑图设计工具",
-            // 动态链接成果 链接地址
-            // achievementTrendsUrl: type.includes("image")
-            //   ? `http://10.254.197.124:9099/workflow/workflow#/topoView/${file.id}`
-            //   : null,
-            // 静态文件成果片段
-            achievement,
-            //  动态链接成果 缩略图
-            // thumbnail: type.includes("image") ? achievement : null,
-            thumbnail: null,
-            beforeUpload: (data) => console.info("上报成果参数", data),
-            afterUpload: (data) => {
-              console.info("上报成果结果 ", data);
-              if (data.code === 200) {
-                this.$message.success("发布队列上报成功!");
-                //onOptionFlag = record => {
-                //return async () => {
-                // actions.topolaogy.editTopolaogy({
-                //   id: file.id,
-                //   delFlag: "0",
-                // });
-                // _this.onSearch();
-                //};
-                //};
-              } else {
-                this.$message.error("发布队列上报失败!" + data.msg);
-              }
-            },
-          };
-          window.UploadSDK.init(options);
-        }
-      });
+      if(file.documentType === 'video'){
+        //getPreviewVideoUrl 视频类型改成发布url
+        const achievementTrendsUrl = getPreviewVideoUrl(file.documentShortUrl, this.userId);
+        const videoImg = require("@/assets/images/file/file_video.png")
+        getBase64Img(videoImg).then(res => {
+          const thumbnail = changeBase64ToBlob(res,'缩略图')
+          this.publishSDK({achievementTrendsUrl,thumbnail})
+       })
+      }else{
+        getFileByte({
+          shortUrl: file.shortUrl || file.documentShortUrl,
+        }).then((res) => {
+          const { flag, bytes } = res;
+          if (flag === "SUCCESS") {
+            const type = TYPE_MAP[file.documentSuffix];
+            const achievement = convertBase64UrlToFile(
+              bytes,
+              file.documentName,
+              type
+            );
+            this.publishSDK({achievement})
+          }
+        });
+      }
     },
+    publishSDK: function({achievement, achievementTrendsUrl,thumbnail}){
+      const options = {
+        appId: "4902148278edc095f113945c101e",
+        userName: this.userId,
+        systemName: "database_system",
+        // "systemName":"网络拓扑图设计工具",
+        // 动态链接成果 链接地址
+        // achievementTrendsUrl: type.includes("image")
+        //   ? `http://10.254.197.124:9099/workflow/workflow#/topoView/${file.id}`
+        //   : null,
+        // 静态文件成果片段
+        // achievement,
+        //  动态链接成果 缩略图
+        // thumbnail: type.includes("image") ? achievement : null,
+        thumbnail: null,
+        beforeUpload: (data) => console.info("上报成果参数", data),
+        afterUpload: (data) => {
+          console.info("上报成果结果 ", data);
+          if (data.code === 200) {
+            this.$message.success("发布队列上报成功!");
+            //onOptionFlag = record => {
+            //return async () => {
+            // actions.topolaogy.editTopolaogy({
+            //   id: file.id,
+            //   delFlag: "0",
+            // });
+            // _this.onSearch();
+            //};
+            //};
+          } else {
+            this.$message.error("发布队列上报失败!" + data.msg);
+          }
+        },
+      };
+      if(achievement){
+        options.achievement = achievement
+      }
+      if(achievementTrendsUrl){
+        options.achievementTrendsUrl = achievementTrendsUrl;
+        options.thumbnail = thumbnail;
+      }
+      window.UploadSDK.init(options);
+    }
   },
   computed: {
     handleText: function () {
@@ -1066,4 +1162,21 @@ export default {
   height: 40px;
   line-height: 40px;
 }
+.logs-list{
+  max-height: 400px;
+  overflow-y: auto;
+}
+.logs-list p{
+    margin-bottom: 0;
+    padding-left: 10px;
+    border-radius: 3px;
+    line-height: 25px;
+    font-size: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e4e4e4;
+    
+}
+.logs-list p:hover{
+    background-color: #f2f2f2
+  }
 </style>

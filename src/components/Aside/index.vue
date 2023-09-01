@@ -15,6 +15,8 @@
         <i :class="item.icon"></i>
         <span slot="title">{{ item.rightDesc }}</span>
       </el-menu-item>
+       <!-- <el-menu-item index="/recentfile"><span slot="title">最近文件</span></el-menu-item> -->
+      
 
       <!-- <el-menu-item :route="{ path: '/index' }" index="/index">
         <i class="el-icon-menu" title="全部"></i>
@@ -94,7 +96,6 @@ export default {
     //  导航菜单项点击事件
     handleSelect(index) {
       console.log(this.userPrivileges);
-      debugger;
       this.$router.push({
         path: index,
         query: {},

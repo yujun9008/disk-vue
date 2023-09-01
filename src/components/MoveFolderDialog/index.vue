@@ -28,14 +28,15 @@
 </template>
 
 <script>
-import { queryAdminCreateFolderTree, moveFolder,moveFile } from "@/api/file";
+import { queryAdminCreateFolderTree, moveFolder,moveFile,batchMoveFile } from "@/api/file";
 export default {
   name: "MoveFolderDialog",
   props: {
     dialogVisible: Boolean,
+    isRecentFilePage: Boolean,
     isMoveFile: Boolean,
     targetFolder: Object,
-    targetFile: Object,
+    selectionFile: Array
   },
   components: {},
   data() {
@@ -85,18 +86,35 @@ export default {
       }
 
       if(this.isMoveFile){
-        const sourceFolderId = this.$route.query.folderId;
-        moveFile({
-          sourceFileId: this.targetFile?.id,
-          sourceFolderId,
-          targetFolderId:  checkedNodes[0]?.folder_id,
-          mover: this.userId,
-        }).then((res) => {
-        saveCb(res)
-      })
+        const sourceFolderId = this.isRecentFilePage ? this.selectionFile[0]?.folderId: this.$route.query.folderId;
+        if(this.selectionFile.length > 1){
+          const sourceFileIdList = this.selectionFile.map(file => file.id);
+          batchMoveFile({
+            sourceFileIdList,
+            sourceFolderId,
+            targetFolderId:  checkedNodes[0]?.folder_id,
+            mover: this.userId,
+          }).then((res) => {
+          saveCb(res)
+         })
+        }else{
+
+          moveFile({
+            sourceFileId: this.selectionFile[0]?.id || this.selectionFile[0]?.documentId,
+            sourceFolderId,
+            targetFolderId:  checkedNodes[0]?.folder_id,
+            mover: this.userId,
+          }).then((res) => {
+          saveCb(res)
+         })
+          
+        }
       }else{
+        // const targetFolder = this.selectionFile[0];
+        const sourceFolderIdList = this.selectionFile.map(folder => folder.id || folder.documentId);
+        // const sourceFolderId = targetFolder?.folder_id || targetFolder?.documentId || targetFolder?.id;
         moveFolder({
-          sourceFolderId: this.folderId,
+          sourceFolderIdList,
           targetFolderId: checkedNodes[0]?.folder_id,
           mover: this.userId,
         }).then((res) => {
@@ -135,13 +153,6 @@ export default {
       get() {
         return this.$store.getters.userId;
       },
-    },
-    folderId: function () {
-      return (
-        this.targetFolder?.folder_id ||
-        this.targetFolder?.documentId ||
-        this.targetFolder?.id
-      );
     },
   },
 };

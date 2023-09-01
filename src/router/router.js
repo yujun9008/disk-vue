@@ -28,6 +28,12 @@ export default new Router({
         import(/* webpackChunkName: "minefile" */ "@/views/File"),
     },
     {
+      path: "/recentfile",
+      name: "RecentFile",
+      component: () =>
+        import(/* webpackChunkName: "minefile" */ "@/views/RecentFile"),
+    },
+    {
       path: "/publicfile",
       name: "PublicFile",
       component: () =>
