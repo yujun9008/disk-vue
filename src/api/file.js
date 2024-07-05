@@ -139,3 +139,4 @@ export const setFolderReviewFlag = (p) =>
   post("/dbs/folder/set_folder_review_flag", p);
 export const moveFile = (p) => post("/dbs/file/move", p);
 export const batchMoveFile = (p) => post("/dbs/file/batch_move", p);
+export const fullTextQuery = (p) => post("/dbs/file/full_text/query", p);

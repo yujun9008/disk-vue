@@ -1,5 +1,6 @@
 import router from "@/router/router";
 import store from "@/store";
+import moment from 'moment';
 
 const whiteList = ["/login", "/401", "/404", "/500"];
 // 路由全局前置守卫
@@ -9,7 +10,7 @@ router.beforeEach((to, from, next) => {
     store.dispatch("getUserInfo").then(() => {
       console.log("store", store.getters.userId);
       debugger;
-      if (!store.getters.userId) {
+      if (!store.getters.userId) { 
         next({
           path: "/401",
         });
@@ -18,6 +19,8 @@ router.beforeEach((to, from, next) => {
       }
     });
   }
+  console.log('store.getters',JSON.stringify(store.getters))
+ 
   // if (store.getters.userId && !store.getters.userPrivileges) {
   //   store.dispatch("getUserPrivileges").then(() => {
   //     if (!store.getters.hasPrivileges) {

@@ -1,54 +1,62 @@
 <template>
   <div class="tableWrapper">
-    <!-- 面包屑导航栏 -->
-    <BreadCrumb class="breadcrumb"></BreadCrumb>
-    <OperationMenu
-      @getTableDataByType="getTableDataByType"
-      :selectionFile="selectionFile"
-      :selectionRenameFile="selectionRenameFile"
-    ></OperationMenu>
-    <FileTable
-      :file-list="fileList"
-      class="file-table"
-      @getTableDataByType="getTableDataByType"
-      @getTableDataWithPrivilege="getTableDataWithPrivilege"
-      @selectionChange="selectionChange"
-      @renameChange="renameChange"
-      @imgReviewData="imgReviewData"
-      @pdfReviewData="pdfReviewData"
-      @videoReviewData="videoReviewData"
-      @packReviewData="packReviewData"
-      @audioReviewData="audioReviewData"
-    ></FileTable>
-    <el-pagination
-      background
-      layout="prev, pager, next"
-      :hide-on-single-page="true"
-      :total="pagination.total"
-      :page-size="pagination.size"
-      @current-change="pageChange"
-    >
-    </el-pagination>
-    <ImgReview
-      :imgReview="imgReview"
-      @imgReviewData="imgReviewData"
-    ></ImgReview>
-    <PdfReview
-      :pdfReview="pdfReview"
-      @pdfReviewData="pdfReviewData"
-    ></PdfReview>
-    <PackReview
-      :packReview="packReview"
-      @packReviewData="packReviewData"
-    ></PackReview>
-    <VideoReview
-      :videoReview="videoReview"
-      @videoReviewData="videoReviewData"
-    ></VideoReview>
-    <AudioReview
-      :audioReview="audioReview"
-      @audioReviewData="audioReviewData"
-    ></AudioReview>
+    <div v-if="$route.query.search">
+      <SearchComponent
+        :keyword="searchKeyWord"
+        :isMineFile="this.$route.name === 'MineFile'"
+      ></SearchComponent>
+    </div>
+    <div v-else>
+      <!-- 面包屑导航栏 -->
+      <BreadCrumb class="breadcrumb"></BreadCrumb>
+      <OperationMenu
+        @getTableDataByType="getTableDataByType"
+        :selectionFile="selectionFile"
+        :selectionRenameFile="selectionRenameFile"
+      ></OperationMenu>
+      <FileTable
+        :file-list="fileList"
+        class="file-table"
+        @getTableDataByType="getTableDataByType"
+        @getTableDataWithPrivilege="getTableDataWithPrivilege"
+        @selectionChange="selectionChange"
+        @renameChange="renameChange"
+        @imgReviewData="imgReviewData"
+        @pdfReviewData="pdfReviewData"
+        @videoReviewData="videoReviewData"
+        @packReviewData="packReviewData"
+        @audioReviewData="audioReviewData"
+      ></FileTable>
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :hide-on-single-page="true"
+        :total="pagination.total"
+        :page-size="pagination.size"
+        @current-change="pageChange"
+      >
+      </el-pagination>
+      <ImgReview
+        :imgReview="imgReview"
+        @imgReviewData="imgReviewData"
+      ></ImgReview>
+      <PdfReview
+        :pdfReview="pdfReview"
+        @pdfReviewData="pdfReviewData"
+      ></PdfReview>
+      <PackReview
+        :packReview="packReview"
+        @packReviewData="packReviewData"
+      ></PackReview>
+      <VideoReview
+        :videoReview="videoReview"
+        @videoReviewData="videoReviewData"
+      ></VideoReview>
+      <AudioReview
+        :audioReview="audioReview"
+        @audioReviewData="audioReviewData"
+      ></AudioReview>
+    </div>
   </div>
 </template>
 
@@ -61,6 +69,7 @@ import PdfReview from "@/components/PdfReview";
 import PackReview from "@/components/PackReview";
 import VideoReview from "@/components/VideoReview";
 import AudioReview from "@/components/AudioReview";
+import SearchComponent from "@/components/SearchComponent";
 import {
   listDir,
   queryFileList,
@@ -84,12 +93,14 @@ export default {
     VideoReview,
     AudioReview,
     PackReview,
+    SearchComponent,
   },
   data() {
     return {
       fileList: [], //  表格数据-文件列表
       selectionFile: [],
       selectionRenameFile: {},
+      isSearchPage: false,
       //  查看图片模态框数据
       imgReview: {
         visible: false,
@@ -118,6 +129,9 @@ export default {
       },
       pagination: {},
       currentPage: 1,
+      searchKeyWord: "",
+      searchText: "",
+      mineFileFolderId: "",
     };
   },
   mounted() {
@@ -129,13 +143,33 @@ export default {
      */
     getTableDataByType(search) {
       // this.showFileListByType(search);
-      debugger;
+      this.isSearchPage = true;
+      this.searchKeyWord = search;
       if (this.$route.name === "MineFile") {
-        //我的文件
-        this.showFileListByType(this.$store.getters.search);
+        this.$router.push({
+          query: {
+            search: search,
+            folderId: this.mineFileFolderId,
+          },
+        });
       } else {
-        this.getWithPrivilege(this.$store.getters.search);
+        this.$router.push({
+          query: {
+            search: search,
+          },
+        });
       }
+
+      // if (this.$route.name === "MineFile") {
+      //   //我的文件
+      //   this.showFileListByType(this.$store.getters.search);
+      // } else {
+      //   this.getWithPrivilege(this.$store.getters.search);
+      // }
+    },
+    handleBack() {
+      this.isSearchPage = false;
+      this.searchKeyWord = "";
     },
     getTableDataWithPrivilege(search) {
       this.getWithPrivilege(search);
@@ -187,8 +221,7 @@ export default {
       // this.showFileListByType(this.$store.getters.search, current);
 
       if (this.$route.name === "MineFile") {
-      
-          this.showFileListByType(this.$store.getters.search, current);
+        this.showFileListByType(this.$store.getters.search, current);
       } else {
         this.getWithPrivilege(this.$store.getters.search, current);
       }
@@ -199,6 +232,7 @@ export default {
       })
         .then((res) => {
           if (res.flag === "SUCCESS") {
+            this.mineFileFolderId = res?.folderId;
             this.fileList = res.pageInfo?.records ?? [];
             this.$router.replace({
               query: { ...this.$route.query, folderId: res?.folderId },
@@ -218,7 +252,7 @@ export default {
       this.selectionFile = selection;
     },
     renameChange(selection) {
-      this.selectionRenameFile = {...selection, tempTime: +new Date()};
+      this.selectionRenameFile = { ...selection, tempTime: +new Date() };
     },
     //  获取查看大图的数据
     imgReviewData(row, visible) {
@@ -280,7 +314,7 @@ export default {
     },
   },
   created() {
-    if (this.$route.name === "MineFile") {
+    if (this.$route.name === "MineFile" && !this.$route.query?.search) {
       //我的文件
       if (!this.$route.query?.folderId) {
         this.initMyFile();

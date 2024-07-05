@@ -60,6 +60,12 @@ export default new Router({
         import(/* webpackChunkName: "rolemanage" */ "@/views/RoleManage"),
     },
     {
+      path: "/search",
+      name: "Search",
+      component: () =>
+        import(/* webpackChunkName: "search" */ "@/views/Search"),
+    },
+    {
       path: "/500",
       name: "Error_500",
       component: () =>

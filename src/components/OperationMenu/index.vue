@@ -10,46 +10,46 @@
     </div>
     <div class="operation-menu-wrapper">
       <div class="operation-menu-inner" v-if="!isRecentFilePage">
-      <el-button-group  class="operation-buttons">
-        <!-- :file-list="fileList" -->
-        <!-- :http-request="uploadBpmn" -->
-        <el-upload
-          class="upload-demo"
-          :show-file-list="false"
-          name="file"
-          multiple
-          :action="action"
-          :on-change="handleUploadChange"
-          :auto-upload="false"
-        >
-          <el-button
-            type="primary"
-            size="small"
-            ref="uploadRef"
-            icon="el-icon-upload2"
-            >上传</el-button
+        <el-button-group class="operation-buttons">
+          <!-- :file-list="fileList" -->
+          <!-- :http-request="uploadBpmn" -->
+          <el-upload
+            class="upload-demo"
+            :show-file-list="false"
+            name="file"
+            multiple
+            :action="action"
+            :on-change="handleUploadChange"
+            :auto-upload="false"
           >
-        </el-upload>
-      </el-button-group>
-      <el-dropdown style="margin-left: 15px" @command="handleCreateDoc">
-        <el-button size="small">
-          创建文档<i class="el-icon-arrow-down el-icon--right"></i>
-        </el-button>
-        <el-dropdown-menu slot="dropdown">
-          <el-dropdown-item command="word">Word文档</el-dropdown-item>
-          <el-dropdown-item command="excel">Excel表格</el-dropdown-item>
-          <el-dropdown-item command="ppt">PPT</el-dropdown-item>
-        </el-dropdown-menu>
-      </el-dropdown>
-      <el-button-group class="operation-buttons">
-        <el-button
-          class="new-dir"
-          size="small"
-          @click="newDir"
-          icon="el-icon-folder-add"
-          >新建文件夹</el-button
-        >
-      </el-button-group>
+            <el-button
+              type="primary"
+              size="small"
+              ref="uploadRef"
+              icon="el-icon-upload2"
+              >上传</el-button
+            >
+          </el-upload>
+        </el-button-group>
+        <el-dropdown style="margin-left: 15px" @command="handleCreateDoc">
+          <el-button size="small">
+            创建文档<i class="el-icon-arrow-down el-icon--right"></i>
+          </el-button>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="word">Word文档</el-dropdown-item>
+            <el-dropdown-item command="excel">Excel表格</el-dropdown-item>
+            <el-dropdown-item command="ppt">PPT</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+        <el-button-group class="operation-buttons">
+          <el-button
+            class="new-dir"
+            size="small"
+            @click="newDir"
+            icon="el-icon-folder-add"
+            >新建文件夹</el-button
+          >
+        </el-button-group>
       </div>
       <el-button-group class="operation-buttons">
         <el-button
@@ -68,7 +68,7 @@
           icon="el-icon-delete"
           >删除
         </el-button>
-         <el-button
+        <el-button
           plain
           size="small"
           v-if="isRecentFilePage"
@@ -77,7 +77,7 @@
           icon="el-icon-guide"
           >移动
         </el-button>
-         <el-button
+        <el-button
           plain
           size="small"
           v-else
@@ -121,7 +121,7 @@
         <a><i class="el-icon-menu"></i></a>
       </div>
       <div class="search" v-if="!isRecentFilePage">
-        <el-input
+        <!-- <el-input
           v-model="search"
           :placeholder="searchPlaceholder"
           clearable
@@ -133,7 +133,16 @@
             icon="el-icon-search"
             @click="searchFileByName"
           ></el-button
-        ></el-input>
+        ></el-input> -->
+
+        <el-autocomplete
+          class="inline-input"
+          v-model="search"
+          :fetch-suggestions="querySearch"
+          placeholder="请输入搜索内容"
+          :trigger-on-focus="false"
+          @select="handleSelect"
+        ></el-autocomplete>
       </div>
       <el-dialog
         title="上传文件"
@@ -159,7 +168,11 @@
           <p v-else>{{ file.name }}</p>
         </div>
         <span slot="footer" class="dialog-footer">
-          <el-button size="small" @click="submitUpload" type="primary" :loading="showProgress"
+          <el-button
+            size="small"
+            @click="submitUpload"
+            type="primary"
+            :loading="showProgress"
             >点击上传</el-button
           >
         </span>
@@ -248,12 +261,12 @@
         </span>
       </el-dialog>
       <MoveFolderDialog
-      :dialogVisible="moveDialogVisible"
-      :selectionFile="selectionFile"
-      :isMoveFile="isMoveFile"
-      :isRecentFilePage="isRecentFilePage"
-      @closeModal="handleCloseModal"
-    />
+        :dialogVisible="moveDialogVisible"
+        :selectionFile="selectionFile"
+        :isMoveFile="isMoveFile"
+        :isRecentFilePage="isRecentFilePage"
+        @closeModal="handleCloseModal"
+      />
     </div>
   </div>
 </template>
@@ -296,7 +309,7 @@ export default {
   components: {
     MoveFolderDialog,
   },
-  
+
   data() {
     return {
       action: `${process.env.VUE_APP_BASE_API}/dbs/file/uploadFile`,
@@ -350,8 +363,8 @@ export default {
     };
   },
   created() {
-    if(this.recentFileList){
-    }else{
+    if (this.recentFileList) {
+    } else {
       this.queryStatistics();
     }
     this.$store.dispatch("setSearch", "");
@@ -710,8 +723,8 @@ export default {
     //folder/file/mix
     getSelectionType: function () {
       let documentFlag = "";
-      if(this.isRecentFilePage){
-        return 'file'
+      if (this.isRecentFilePage) {
+        return "file";
       }
       (this.selectionFile || []).forEach((fi, i) => {
         if (i === 0) {
@@ -938,6 +951,20 @@ export default {
         this.$nextTick(() => resolve());
       });
     },
+    querySearch(queryString, cb) {
+      var results = [
+        {
+          value: `包含${queryString}的文件  `,
+          key: queryString
+        },
+      ];
+      // 调用 callback 返回建议列表的数据
+      cb(results);
+    },
+    handleSelect(item) {
+      const { key }  = item;
+      this.$emit("getTableDataByType", key);
+    },
     searchFileByName: function () {
       this.$emit("getTableDataByType", this.search);
     },
@@ -945,35 +972,33 @@ export default {
       if (this.getSelectionType() === "mix") {
         this.$message.error("目录和文件不能同时选择");
         return;
-      }else if(this.getSelectionType() === "file"){
-         if(this.selectionFile.length > 1){
-            const ids = this.selectionFile.map(it => it.id || it.documentId);
-            getDownloadFile(ids.join(','), '');
-         }else{
+      } else if (this.getSelectionType() === "file") {
+        if (this.selectionFile.length > 1) {
+          const ids = this.selectionFile.map((it) => it.id || it.documentId);
+          getDownloadFile(ids.join(","), "");
+        } else {
           const it = this.selectionFile[0];
-           getDownloadFile(it.id || it.documentId, it.shortUrl);
-         }
-      }else{
+          getDownloadFile(it.id || it.documentId, it.shortUrl);
+        }
+      } else {
         this.selectionFile.forEach((it) => {
           getDownloadFolder(it.id);
         });
       }
-      
     },
     moveTo: function () {
       const selectionType = this.getSelectionType();
 
-      if(selectionType === 'mix'){
+      if (selectionType === "mix") {
         this.$message.error("目录和文件不能同时移动");
         return;
       }
 
-      this.isMoveFile = selectionType === 'file';
+      this.isMoveFile = selectionType === "file";
       this.moveDialogVisible = true;
     },
     singleMoveTo: function () {
-
-      if(this.selectionFile?.length > 1){
+      if (this.selectionFile?.length > 1) {
         this.$message.error("仅支持一个文件移动");
         return;
       }
@@ -1144,8 +1169,8 @@ export default {
     },
   },
   watch: {
-    recentFileList: function(newVal){
-      this.subFilesNum = newVal?.length || 0
+    recentFileList: function (newVal) {
+      this.subFilesNum = newVal?.length || 0;
     },
     selectionFile: function (newVal) {
       //'zip', 'rar', 'gz', '7z'
@@ -1182,7 +1207,7 @@ export default {
   line-height: 60px;
   display: block;
 }
-.operation-menu-inner{
+.operation-menu-inner {
   display: inline-block;
 }
 

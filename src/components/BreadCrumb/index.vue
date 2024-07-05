@@ -61,7 +61,6 @@ export default {
       queryCrumbs({ folderId: this.folderId }).then((res) => {
         const { flag, parentList } = res;
         if (flag === "SUCCESS") {
-          debugger;
           this.breadCrumbList = parentList;
         } else {
           // this.$message.error("文件夹创建失败");
