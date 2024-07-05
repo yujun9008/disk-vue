@@ -73,7 +73,7 @@ export default {
         // },
         // {
         //   value: "delete",
-        //   label: "删除者",
+        //   label: "删除者1",
         // },
       ],
       groupType: "display",
