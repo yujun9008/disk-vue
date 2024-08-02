@@ -70,6 +70,12 @@ export default new Router({
         import(/* webpackChunkName: "error_404" */ "@/views/ErrorPage/404.vue"),
     },
     {
+      path: "/test",
+      name: "Error_4041",
+      component: () =>
+        import(/* webpackChunkName: "error_404" */ "@/views/ErrorPage/404.vue"),
+    },
+    {
       path: "*",
       redirect: "/404",
     },
